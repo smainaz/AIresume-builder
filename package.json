@@ -1,0 +1,19 @@
+{
+  "name": "ai-resume-builder",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "start:client": "cd client && npm start",
+    "start:server": "cd server && npm start",
+    "install:all": "npm install --workspaces"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "crypto-browserify": "^3.12.1",
+    "puppeteer": "^24.20.0",
+    "react-router-dom": "^7.6.2"
+  }
+}

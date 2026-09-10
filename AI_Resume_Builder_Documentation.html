@@ -1,0 +1,249 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Builder Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.7;
+            color: #2c3e50;
+            background: #ffffff;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 30px;
+        }
+        
+        h1 {
+            color: #1a365d;
+            font-size: 2.5em;
+            font-weight: 700;
+            border-bottom: 4px solid #3182ce;
+            padding-bottom: 15px;
+            margin: 0 0 30px 0;
+            text-align: center;
+        }
+        
+        h2 {
+            color: #2d3748;
+            font-size: 1.8em;
+            font-weight: 600;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin: 40px 0 20px 0;
+            background: linear-gradient(90deg, #f7fafc 0%, transparent 100%);
+            padding-left: 15px;
+        }
+        
+        h3 {
+            color: #2d3748;
+            font-size: 1.4em;
+            font-weight: 600;
+            margin: 30px 0 15px 0;
+            padding-left: 10px;
+            border-left: 4px solid #3182ce;
+        }
+        
+        h4 {
+            color: #4a5568;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin: 25px 0 10px 0;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        code {
+            background: #f1f5f9;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #e53e3e;
+            border: 1px solid #e2e8f0;
+        }
+        
+        pre {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+            border-left: 5px solid #3182ce;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+            border: none;
+            font-size: 0.9em;
+        }
+        
+        ul, ol {
+            margin: 15px 0 15px 30px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        a {
+            color: #3182ce;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+            color: #2c5aa0;
+        }
+        
+        .toc {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .toc h2 {
+            margin-top: 0;
+            border-bottom: none;
+            background: none;
+            padding-left: 0;
+        }
+        
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 15px 0 0 0;
+        }
+        
+        .toc li {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .toc li:before {
+            content: "▶";
+            position: absolute;
+            left: 0;
+            color: #3182ce;
+        }
+        
+        .toc a {
+            color: #2d3748;
+            font-weight: 500;
+        }
+        
+        blockquote {
+            border-left: 5px solid #3182ce;
+            margin: 20px 0;
+            padding: 15px 20px;
+            background: #f7fafc;
+            border-radius: 0 8px 8px 0;
+            font-style: italic;
+            color: #4a5568;
+        }
+        
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 25px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            text-align: left;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #3182ce 0%, #2c5aa0 100%);
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f7fafc;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+            margin: 15px 0;
+        }
+        
+        .success {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+            margin: 15px 0;
+        }
+        
+        .error {
+            background: #f8d7da;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #dc3545;
+            margin: 15px 0;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+                padding: 20px;
+                font-size: 12pt;
+            }
+            
+            h1 {
+                page-break-before: always;
+                font-size: 24pt;
+            }
+            
+            h1:first-child {
+                page-break-before: avoid;
+            }
+            
+            h2 {
+                page-break-before: always;
+                font-size: 18pt;
+            }
+            
+            h2:first-of-type {
+                page-break-before: avoid;
+            }
+            
+            pre {
+                page-break-inside: avoid;
+            }
+            
+            table {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Resume Builder - Complete Documentation</h1><br><br><h2>Table of Contents</h2><br><ul><li><a href="#project-overview" target="_blank">Project Overview</a></li><br><li><a href="#architecture" target="_blank">Architecture</a></li><br><li><a href="#features" target="_blank">Features</a></li><br><li><a href="#installation--setup" target="_blank">Installation & Setup</a></li><br><li><a href="#api-documentation" target="_blank">API Documentation</a></li><br><li><a href="#frontend-components" target="_blank">Frontend Components</a></li><br><li><a href="#templates" target="_blank">Templates</a></li><br><li><a href="#configuration" target="_blank">Configuration</a></li><br><li><a href="#deployment" target="_blank">Deployment</a></li><br><li><a href="#troubleshooting" target="_blank">Troubleshooting</a></li><br><li><a href="#contributing" target="_blank">Contributing</a></li><br><br><h2>Project Overview</h2><br><br>The AI Resume Builder is a full-stack web application that enables users to create professional resumes with the assistance of artificial intelligence. The application provides multiple resume templates, real-time preview functionality, and AI-powered content enhancement to help users create compelling resumes quickly and efficiently.<br><br><h3>Key Highlights</h3><br><li><strong>Modern React Frontend</strong> with Material-UI components</li><br><li><strong>Node.js/Express Backend</strong> with AI integration</li><br><li><strong>Multiple Resume Templates</strong> (Classic, Modern, Minimal, Creative)</li><br><li><strong>AI-Powered Content Enhancement</strong> using OpenRouter API</li><br><li><strong>PDF Export Functionality</strong> with template-specific styling</li><br><li><strong>User Authentication</strong> system</li><br><li><strong>Responsive Design</strong> for all devices</li><br><br><h2>Architecture</h2><br><br><h3>Frontend (React)</h3><br><li><strong>Framework</strong>: React 18.2.0</li><br><li><strong>UI Library</strong>: Material-UI (MUI) v7.1.2</li><br><li><strong>Routing</strong>: React Router DOM v6.23.0</li><br><li><strong>PDF Generation</strong>: jsPDF v2.5.1</li><br><li><strong>HTTP Client</strong>: Axios v1.6.7</li><br><br><h3>Backend (Node.js)</h3><br><li><strong>Runtime</strong>: Node.js with ES modules</li><br><li><strong>Framework</strong>: Express.js v4.18.2</li><br><li><strong>AI Integration</strong>: OpenRouter API (GPT-3.5-turbo)</li><br><li><strong>CORS</strong>: Enabled for cross-origin requests</li><br><li><strong>Environment</strong>: dotenv for configuration</li><br><br><h3>Project Structure</h3><br><pre><code><br>resumebuilder/<br>├── client/                 # React frontend<br>│   ├── src/<br>│   │   ├── components/     # Reusable UI components<br>│   │   ├── pages/         # Page components<br>│   │   ├── assets/        # Static assets<br>│   │   └── App.js         # Main application component<br>│   └── package.json<br>├── server/                # Node.js backend<br>│   ├── index.js          # Server entry point<br>│   └── package.json<br>├── package.json          # Root package configuration<br>└── README.md<br></code></pre><br><br><h2>Features</h2><br><br><h3>1. User Authentication</h3><br><li><strong>Sign Up</strong>: Create new user accounts</li><br><li><strong>Log In</strong>: Access existing accounts</li><br><li><strong>Session Management</strong>: Persistent login using localStorage</li><br><li><strong>Protected Routes</strong>: Resume builder requires authentication</li><br><br><h3>2. Resume Templates</h3><br><li><strong>Classic Template</strong>: Professional and traditional layout</li><br><li><strong>Modern Template</strong>: Clean and contemporary design</li><br><li><strong>Minimal Template</strong>: Simple and elegant style</li><br><li><strong>Creative Template</strong>: Unique and eye-catching design with emojis</li><br><br><h3>3. Resume Form</h3><br><li><strong>Personal Information</strong>: Name, email, phone</li><br><li><strong>Professional Summary</strong>: AI-enhanced content</li><br><li><strong>Experience</strong>: Work history and achievements</li><br><li><strong>Education</strong>: Academic background</li><br><li><strong>Skills</strong>: Dynamic skill management with chips</li><br><li><strong>Additional Sections</strong>: Hobbies, languages, certifications</li><br><li><strong>Photo Upload</strong>: Profile picture support</li><br><br><h3>4. AI Enhancement</h3><br><li><strong>Content Generation</strong>: AI-powered resume content creation</li><br><li><strong>Professional Optimization</strong>: Enhanced summaries and descriptions</li><br><li><strong>Fallback System</strong>: Basic enhancement when AI is unavailable</li><br><li><strong>Error Handling</strong>: Comprehensive error management</li><br><br><h3>5. Live Preview</h3><br><li><strong>Real-time Updates</strong>: Instant preview as you type</li><br><li><strong>Template Switching</strong>: Dynamic template changes</li><br><li><strong>Responsive Design</strong>: Optimized for all screen sizes</li><br><br><h3>6. PDF Export</h3><br><li><strong>Template-specific Styling</strong>: Each template has unique PDF formatting</li><br><li><strong>Image Support</strong>: Profile photos in PDF</li><br><li><strong>Professional Layout</strong>: Clean, ATS-friendly formatting</li><br><li><strong>Custom Filenames</strong>: Template-based file naming</li><br><br><h3>7. Dark Mode</h3><br><li><strong>Theme Toggle</strong>: Switch between light and dark modes</li><br><li><strong>Persistent Settings</strong>: Theme preference saved</li><br><li><strong>Material-UI Integration</strong>: Seamless theme switching</li><br><br><h2>Installation & Setup</h2><br><br><h3>Prerequisites</h3><br><li>Node.js (v16+ recommended)</li><br><li>npm or yarn package manager</li><br><li>OpenAI API key (for AI features)</li><br><br><h3>Step 1: Clone the Repository</h3><br><pre><code class="language-bash"><br>git clone <repository-url><br>cd resumebuilder<br></code></pre><br><br><h3>Step 2: Install Dependencies</h3><br><pre><code class="language-bash"><br><h1>Install all dependencies (root, client, and server)</h1><br>npm run install:all<br><br><h1>Or install individually</h1><br>cd client && npm install<br>cd ../server && npm install<br></code></pre><br><br><h3>Step 3: Environment Configuration</h3><br>Create a <code>.env</code> file in the <code>server</code> directory:<br><pre><code>env<br>OPENROUTER_API_KEY=your_openrouter_api_key_here<br></code></pre><br><br><h3>Step 4: Start the Application</h3><br><pre><code class="language-bash"><br><h1>Start both client and server</h1><br>npm run start:client  # Terminal 1<br>npm run start:server  # Terminal 2<br><br><h1>Or start individually</h1><br>cd client && npm start    # Frontend on http://localhost:3000<br>cd server && npm start    # Backend on http://localhost:5000<br></code></pre><br><br><h3>Step 5: Access the Application</h3><br><li>Open your browser and navigate to <code>http://localhost:3000</code></li><br><li>The application should be running with full functionality</li><br><br><h2>API Documentation</h2><br><br><h3>Base URL</h3><br><pre><code><br>http://localhost:5000<br></code></pre><br><br><h3>Endpoints</h3><br><br><h4>POST /api/ai-resume</h4><br>Enhances resume content using AI.<br><br><strong>Request Body:</strong><br><pre><code class="language-json"><br>{<br>  "name": "string",<br>  "email": "string", <br>  "phone": "string",<br>  "summary": "string",<br>  "experience": "string",<br>  "education": "string",<br>  "skills": ["string"] | "string",<br>  "hobbies": "string",<br>  "languages": "string",<br>  "certifications": "string"<br>}<br></code></pre><br><br><strong>Response:</strong><br><pre><code class="language-json"><br>{<br>  "name": "string",<br>  "email": "string",<br>  "phone": "string", <br>  "summary": "AI-enhanced summary",<br>  "experience": "string",<br>  "education": "string",<br>  "skills": ["string"],<br>  "hobbies": "string",<br>  "languages": "string",<br>  "certifications": "string",<br>  "note": "string (optional)"<br>}<br></code></pre><br><br><strong>Error Responses:</strong><br><li><code>413</code>: Request too large</li><br><li><code>429</code>: Too many requests</li><br><li><code>500</code>: AI service unavailable</li><br><li><code>ECONNREFUSED</code>: Server not running</li><br><br><h2>Frontend Components</h2><br><br><h3>App.js</h3><br>Main application component with routing and authentication context.<br><br><strong>Key Features:</strong><br><li>React Router setup</li><br><li>Authentication context provider</li><br><li>Dark mode support</li><br><li>Navigation header</li><br><br><h3>ResumeForm.js</h3><br>Form component for collecting resume information.<br><br><strong>Props:</strong><br><li><code>setResumeData</code>: Function to update resume data</li><br><br><strong>Features:</strong><br><li>Form validation</li><br><li>Skill management with chips</li><br><li>Image upload</li><br><li>AI enhancement integration</li><br><li>Real-time data updates</li><br><br><h3>ResumePreview.js</h3><br>Component for displaying resume preview with different templates.<br><br><strong>Props:</strong><br><li><code>resumeData</code>: Resume information object</li><br><li><code>template</code>: Selected template name</li><br><br><strong>Templates:</strong><br><li>Classic: Professional layout with Material-UI Paper</li><br><li>Modern: Clean design with bullet points</li><br><li>Minimal: Simple text-based layout</li><br><li>Creative: Emoji-enhanced sections</li><br><br><h3>TemplateGallery.js</h3><br>Template selection interface.<br><br><strong>Features:</strong><br><li>Visual template previews</li><br><li>Template selection state</li><br><li>Navigation to builder</li><br><li>Responsive grid layout</li><br><br><h3>DownloadPDF.js</h3><br>PDF generation and download functionality.<br><br><strong>Props:</strong><br><li><code>resumeData</code>: Resume information</li><br><li><code>template</code>: Selected template</li><br><br><strong>Features:</strong><br><li>Template-specific styling</li><br><li>Image support</li><br><li>Professional formatting</li><br><li>Error handling</li><br><br><h3>Pages</h3><br><br><h4>Home.js</h4><br>Landing page with welcome message and call-to-action.<br><br><h4>Login.js</h4><br>User authentication page with form validation.<br><br><h4>Signup.js</h4><br>User registration page with duplicate email checking.<br><br><h2>Templates</h2><br><br><h3>Classic Template</h3><br><li><strong>Style</strong>: Professional and traditional</li><br><li><strong>Layout</strong>: Centered content with clear sections</li><br><li><strong>Colors</strong>: Blue accent (#1976d2)</li><br><li><strong>Features</strong>: Profile photo, structured sections</li><br><br><h3>Modern Template</h3><br><li><strong>Style</strong>: Clean and contemporary</li><br><li><strong>Layout</strong>: Left-aligned with bullet points</li><br><li><strong>Colors</strong>: Indigo accent (#6366f1)</li><br><li><strong>Features</strong>: Minimalist design, skill bullets</li><br><br><h3>Minimal Template</h3><br><li><strong>Style</strong>: Simple and elegant</li><br><li><strong>Layout</strong>: Inline sections with bold labels</li><br><li><strong>Colors</strong>: Dark text (#22223b)</li><br><li><strong>Features</strong>: Text-only, no special formatting</li><br><br><h3>Creative Template</h3><br><li><strong>Style</strong>: Unique and eye-catching</li><br><li><strong>Layout</strong>: Emoji-enhanced sections</li><br><li><strong>Colors</strong>: Orange accent (#f59e42)</li><br><li><strong>Features</strong>: Emojis, colorful design</li><br><br><h2>Configuration</h2><br><br><h3>Environment Variables</h3><br><pre><code>env<br><h1>Server Configuration</h1><br>OPENROUTER_API_KEY=your_api_key_here<br>PORT=5000<br><br><h1>Client Configuration (defaults)</h1><br>REACT_APP_API_URL=http://localhost:5000<br></code></pre><br><br><h3>API Configuration</h3><br>The application uses OpenRouter API for AI features:<br><li><strong>Model</strong>: GPT-3.5-turbo</li><br><li><strong>Max Tokens</strong>: 512</li><br><li><strong>Rate Limiting</strong>: Handled by OpenRouter</li><br><li><strong>Fallback</strong>: Basic enhancement when API unavailable</li><br><br><h3>CORS Configuration</h3><br><pre><code class="language-javascript"><br>app.use(cors()); // Allows all origins in development<br></code></pre><br><br><h2>Deployment</h2><br><br><h3>Frontend Deployment (Netlify/Vercel)</h3><br><li>Build the React app:</li><br>   <pre><code class="language-bash"><br>   cd client<br>   npm run build<br>   </code></pre><br><br><li>Deploy the <code>build</code> folder to your hosting service</li><br><br><li>Configure environment variables for production API URL</li><br><br><h3>Backend Deployment (Heroku/Railway)</h3><br><li>Create production <code>.env</code> file</li><br><li>Set up environment variables in hosting platform</li><br><li>Deploy the <code>server</code> directory</li><br><li>Configure CORS for production domain</li><br><br><h3>Docker Deployment</h3><br><pre><code>dockerfile<br><h1>Dockerfile for client</h1><br>FROM node:16-alpine<br>WORKDIR /app<br>COPY client/package*.json ./<br>RUN npm install<br>COPY client/ .<br>RUN npm run build<br>EXPOSE 3000<br>CMD ["npm", "start"]<br><br><h1>Dockerfile for server</h1><br>FROM node:16-alpine<br>WORKDIR /app<br>COPY server/package*.json ./<br>RUN npm install<br>COPY server/ .<br>EXPOSE 5000<br>CMD ["npm", "start"]<br></code></pre><br><br><h2>Troubleshooting</h2><br><br><h3>Common Issues</h3><br><br><h4>1. AI Enhancement Not Working</h4><br><strong>Problem</strong>: "AI enhancement failed" error<br><strong>Solutions</strong>:<br><li>Check OpenRouter API key in <code>server/.env</code></li><br><li>Verify server is running on port 5000</li><br><li>Check API key validity and credits</li><br><li>Restart the server after adding API key</li><br><br><h4>2. PDF Download Issues</h4><br><strong>Problem</strong>: PDF not generating or missing content<br><strong>Solutions</strong>:<br><li>Ensure resume form is filled completely</li><br><li>Check browser console for errors</li><br><li>Verify jsPDF library is loaded</li><br><li>Try different browser</li><br><br><h4>3. Template Not Loading</h4><br><strong>Problem</strong>: Template preview not showing<br><strong>Solutions</strong>:<br><li>Check if template images exist in <code>public/images/templates/</code></li><br><li>Verify template selection in localStorage</li><br><li>Clear browser cache and reload</li><br><br><h4>4. Authentication Issues</h4><br><strong>Problem</strong>: Login/signup not working<br><strong>Solutions</strong>:<br><li>Check localStorage is enabled</li><br><li>Clear browser data and try again</li><br><li>Verify form validation requirements</li><br><br><h3>Debug Mode</h3><br>Enable debug logging by adding to <code>server/index.js</code>:<br><pre><code class="language-javascript"><br>console.log('Debug: Request body:', req.body);<br>console.log('Debug: API response:', response.data);<br></code></pre><br><br><h2>Contributing</h2><br><br><h3>Development Setup</h3><br><li>Fork the repository</li><br><li>Create a feature branch</li><br><li>Make your changes</li><br><li>Test thoroughly</li><br><li>Submit a pull request</li><br><br><h3>Code Style</h3><br><li>Use ES6+ features</li><br><li>Follow React best practices</li><br><li>Use Material-UI components consistently</li><br><li>Add comments for complex logic</li><br><br><h3>Testing</h3><br><li>Test all templates</li><br><li>Verify PDF generation</li><br><li>Check responsive design</li><br><li>Test AI enhancement functionality</li></ul><br><br>---<br><br><h2>License</h2><br>MIT License - see LICENSE file for details<br><br><h2>Support</h2><br>For issues and questions, please create an issue in the repository or contact the development team.<br>
+</body>
+</html>

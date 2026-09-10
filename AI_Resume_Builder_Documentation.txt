@@ -1,0 +1,431 @@
+AI Resume Builder - Complete Documentation
+
+Table of Contents
+1. Project Overview
+2. Architecture
+3. Features
+4. Installation & Setup
+5. API Documentation
+6. Frontend Components
+7. Templates
+8. Configuration
+9. Deployment
+10. Troubleshooting
+11. Contributing
+
+Project Overview
+
+The AI Resume Builder is a full-stack web application that enables users to create professional resumes with the assistance of artificial intelligence. The application provides multiple resume templates, real-time preview functionality, and AI-powered content enhancement to help users create compelling resumes quickly and efficiently.
+
+Key Highlights
+- Modern React Frontend with Material-UI components
+- Node.js/Express Backend with AI integration
+- Multiple Resume Templates (Classic, Modern, Minimal, Creative)
+- AI-Powered Content Enhancement using OpenRouter API
+- PDF Export Functionality with template-specific styling
+- User Authentication system
+- Responsive Design for all devices
+
+Architecture
+
+Frontend (React)
+- Framework: React 18.2.0
+- UI Library: Material-UI (MUI) v7.1.2
+- Routing: React Router DOM v6.23.0
+- PDF Generation: jsPDF v2.5.1
+- HTTP Client: Axios v1.6.7
+
+Backend (Node.js)
+- Runtime: Node.js with ES modules
+- Framework: Express.js v4.18.2
+- AI Integration: OpenRouter API (GPT-3.5-turbo)
+- CORS: Enabled for cross-origin requests
+- Environment: dotenv for configuration
+
+Project Structure
+``
+resumebuilder/
+├── client/                 # React frontend
+│   ├── src/
+│   │   ├── components/     # Reusable UI components
+│   │   ├── pages/         # Page components
+│   │   ├── assets/        # Static assets
+│   │   └── App.js         # Main application component
+│   └── package.json
+├── server/                # Node.js backend
+│   ├── index.js          # Server entry point
+│   └── package.json
+├── package.json          # Root package configuration
+└── README.md
+`
+
+Features
+
+1. User Authentication
+- Sign Up: Create new user accounts
+- Log In: Access existing accounts
+- Session Management: Persistent login using localStorage
+- Protected Routes: Resume builder requires authentication
+
+2. Resume Templates
+- Classic Template: Professional and traditional layout
+- Modern Template: Clean and contemporary design
+- Minimal Template: Simple and elegant style
+- Creative Template: Unique and eye-catching design with emojis
+
+3. Resume Form
+- Personal Information: Name, email, phone
+- Professional Summary: AI-enhanced content
+- Experience: Work history and achievements
+- Education: Academic background
+- Skills: Dynamic skill management with chips
+- Additional Sections: Hobbies, languages, certifications
+- Photo Upload: Profile picture support
+
+4. AI Enhancement
+- Content Generation: AI-powered resume content creation
+- Professional Optimization: Enhanced summaries and descriptions
+- Fallback System: Basic enhancement when AI is unavailable
+- Error Handling: Comprehensive error management
+
+5. Live Preview
+- Real-time Updates: Instant preview as you type
+- Template Switching: Dynamic template changes
+- Responsive Design: Optimized for all screen sizes
+
+6. PDF Export
+- Template-specific Styling: Each template has unique PDF formatting
+- Image Support: Profile photos in PDF
+- Professional Layout: Clean, ATS-friendly formatting
+- Custom Filenames: Template-based file naming
+
+7. Dark Mode
+- Theme Toggle: Switch between light and dark modes
+- Persistent Settings: Theme preference saved
+- Material-UI Integration: Seamless theme switching
+
+Installation & Setup
+
+Prerequisites
+- Node.js (v16+ recommended)
+- npm or yarn package manager
+- OpenAI API key (for AI features)
+
+Step 1: Clone the Repository
+`bash
+git clone <repository-url>
+cd resumebuilder
+`
+
+Step 2: Install Dependencies
+`bash
+Install all dependencies (root, client, and server)
+npm run install:all
+
+Or install individually
+cd client && npm install
+cd ../server && npm install
+`
+
+Step 3: Environment Configuration
+Create a .env file in the server directory:
+`env
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+`
+
+Step 4: Start the Application
+`bash
+Start both client and server
+npm run start:client  # Terminal 1
+npm run start:server  # Terminal 2
+
+Or start individually
+cd client && npm start    # Frontend on http://localhost:3000
+cd server && npm start    # Backend on http://localhost:5000
+`
+
+Step 5: Access the Application
+- Open your browser and navigate to http://localhost:3000
+- The application should be running with full functionality
+
+API Documentation
+
+Base URL
+`
+http://localhost:5000
+`
+
+Endpoints
+
+POST /api/ai-resume
+Enhances resume content using AI.
+
+Request Body:
+`json
+{
+  "name": "string",
+  "email": "string", 
+  "phone": "string",
+  "summary": "string",
+  "experience": "string",
+  "education": "string",
+  "skills": ["string"] | "string",
+  "hobbies": "string",
+  "languages": "string",
+  "certifications": "string"
+}
+`
+
+Response:
+`json
+{
+  "name": "string",
+  "email": "string",
+  "phone": "string", 
+  "summary": "AI-enhanced summary",
+  "experience": "string",
+  "education": "string",
+  "skills": ["string"],
+  "hobbies": "string",
+  "languages": "string",
+  "certifications": "string",
+  "note": "string (optional)"
+}
+`
+
+Error Responses:
+- 413: Request too large
+- 429: Too many requests
+- 500: AI service unavailable
+- ECONNREFUSED: Server not running
+
+Frontend Components
+
+App.js
+Main application component with routing and authentication context.
+
+Key Features:
+- React Router setup
+- Authentication context provider
+- Dark mode support
+- Navigation header
+
+ResumeForm.js
+Form component for collecting resume information.
+
+Props:
+- setResumeData: Function to update resume data
+
+Features:
+- Form validation
+- Skill management with chips
+- Image upload
+- AI enhancement integration
+- Real-time data updates
+
+ResumePreview.js
+Component for displaying resume preview with different templates.
+
+Props:
+- resumeData: Resume information object
+- template: Selected template name
+
+Templates:
+- Classic: Professional layout with Material-UI Paper
+- Modern: Clean design with bullet points
+- Minimal: Simple text-based layout
+- Creative: Emoji-enhanced sections
+
+TemplateGallery.js
+Template selection interface.
+
+Features:
+- Visual template previews
+- Template selection state
+- Navigation to builder
+- Responsive grid layout
+
+DownloadPDF.js
+PDF generation and download functionality.
+
+Props:
+- resumeData: Resume information
+- template: Selected template
+
+Features:
+- Template-specific styling
+- Image support
+- Professional formatting
+- Error handling
+
+Pages
+
+Home.js
+Landing page with welcome message and call-to-action.
+
+Login.js
+User authentication page with form validation.
+
+Signup.js
+User registration page with duplicate email checking.
+
+Templates
+
+Classic Template
+- Style: Professional and traditional
+- Layout: Centered content with clear sections
+- Colors: Blue accent (#1976d2)
+- Features: Profile photo, structured sections
+
+Modern Template
+- Style: Clean and contemporary
+- Layout: Left-aligned with bullet points
+- Colors: Indigo accent (#6366f1)
+- Features: Minimalist design, skill bullets
+
+Minimal Template
+- Style: Simple and elegant
+- Layout: Inline sections with bold labels
+- Colors: Dark text (#22223b)
+- Features: Text-only, no special formatting
+
+Creative Template
+- Style: Unique and eye-catching
+- Layout: Emoji-enhanced sections
+- Colors: Orange accent (#f59e42)
+- Features: Emojis, colorful design
+
+Configuration
+
+Environment Variables
+`env
+Server Configuration
+OPENROUTER_API_KEY=your_api_key_here
+PORT=5000
+
+Client Configuration (defaults)
+REACT_APP_API_URL=http://localhost:5000
+`
+
+API Configuration
+The application uses OpenRouter API for AI features:
+- Model: GPT-3.5-turbo
+- Max Tokens: 512
+- Rate Limiting: Handled by OpenRouter
+- Fallback: Basic enhancement when API unavailable
+
+CORS Configuration
+`javascript
+app.use(cors()); // Allows all origins in development
+`
+
+Deployment
+
+Frontend Deployment (Netlify/Vercel)
+1. Build the React app:
+   `bash
+   cd client
+   npm run build
+   `
+
+2. Deploy the build folder to your hosting service
+
+3. Configure environment variables for production API URL
+
+Backend Deployment (Heroku/Railway)
+1. Create production .env file
+2. Set up environment variables in hosting platform
+3. Deploy the server directory
+4. Configure CORS for production domain
+
+Docker Deployment
+`dockerfile
+Dockerfile for client
+FROM node:16-alpine
+WORKDIR /app
+COPY client/package*.json ./
+RUN npm install
+COPY client/ .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
+
+Dockerfile for server
+FROM node:16-alpine
+WORKDIR /app
+COPY server/package*.json ./
+RUN npm install
+COPY server/ .
+EXPOSE 5000
+CMD ["npm", "start"]
+`
+
+Troubleshooting
+
+Common Issues
+
+1. AI Enhancement Not Working
+Problem: "AI enhancement failed" error
+Solutions:
+- Check OpenRouter API key in server/.env
+- Verify server is running on port 5000
+- Check API key validity and credits
+- Restart the server after adding API key
+
+2. PDF Download Issues
+Problem: PDF not generating or missing content
+Solutions:
+- Ensure resume form is filled completely
+- Check browser console for errors
+- Verify jsPDF library is loaded
+- Try different browser
+
+3. Template Not Loading
+Problem: Template preview not showing
+Solutions:
+- Check if template images exist in public/images/templates/
+- Verify template selection in localStorage
+- Clear browser cache and reload
+
+4. Authentication Issues
+Problem: Login/signup not working
+Solutions:
+- Check localStorage is enabled
+- Clear browser data and try again
+- Verify form validation requirements
+
+Debug Mode
+Enable debug logging by adding to server/index.js:
+`javascript
+console.log('Debug: Request body:', req.body);
+console.log('Debug: API response:', response.data);
+``
+
+Contributing
+
+Development Setup
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+Code Style
+- Use ES6+ features
+- Follow React best practices
+- Use Material-UI components consistently
+- Add comments for complex logic
+
+Testing
+- Test all templates
+- Verify PDF generation
+- Check responsive design
+- Test AI enhancement functionality
+
+---
+
+License
+MIT License - see LICENSE file for details
+
+Support
+For issues and questions, please create an issue in the repository or contact the development team.
