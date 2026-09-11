@@ -2,8 +2,11 @@ import React from 'react';
 import jsPDF from 'jspdf';
 import { Button } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
+import { useAuth } from '../App';
+import { incrementCvCount } from '../utils/stats';
 
 function DownloadPDF({ resumeData, template }) {
+  const { user } = useAuth();
   const handleDownload = () => {
     if (!resumeData || !resumeData.name) {
       alert('Please fill in your resume details before downloading.');
@@ -170,6 +173,10 @@ function DownloadPDF({ resumeData, template }) {
     }
     
     doc.save(`resume-${template}.pdf`);
+
+    if (user?.email) {
+      incrementCvCount(user.email);
+    }
   };
 
   return (

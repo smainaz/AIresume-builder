@@ -1,0 +1,939 @@
+diff --git a/API_SETUP.md b/API_SETUP.md
+index c0b455b3f..7c22fc93c 100644
+--- a/API_SETUP.md
++++ b/API_SETUP.md
+@@ -30,4 +30,45 @@ The PDF download has been fixed to include all your form data. Just fill in the
+ 
+ ---
+ 
+-**Note:** The API key is only needed for AI enhancement. The basic resume builder and PDF download work without it. 
+\ No newline at end of file
++**Note:** The API key is only needed for AI enhancement. The basic resume builder and PDF download work without it.
++
++---
++
++## Jobs Near You (Dashboard)
++
++The Dashboard's "Jobs near you" panel calls Adzuna's job search API.
++
++1. Sign up for a free key at [Adzuna Developer](https://developer.adzuna.com/)
++2. Add these to `server/.env`:
++```
++ADZUNA_APP_ID=your_app_id
++ADZUNA_APP_KEY=your_app_key
++ADZUNA_COUNTRY=gb
++```
++`ADZUNA_COUNTRY` is the two-letter country code Adzuna's API expects (e.g. `gb`, `us`, `za`, `in`) — check [their docs](https://developer.adzuna.com/docs/search) for currently supported countries.
++
++Without these keys, the Dashboard shows sample job listings instead, so nothing breaks — it just won't be live data.
++
++---
++
++## Chatbot
++
++The chatbot widget (bottom-right bubble, on every page) reuses the same `OPENROUTER_API_KEY` you already set up above — no extra key needed. Without a key, it still works using a small set of canned answers about templates, downloads, AI enhancement, and sign-in.
++
++---
++
++## Google Sign-In
++
++1. Go to the [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
++2. Create an **OAuth 2.0 Client ID** of type "Web application"
++3. Add your app's URL (e.g. `http://localhost:3000`) to **Authorized JavaScript origins**
++4. Copy the generated Client ID
++5. Create a file named `.env` in the `client` folder and add:
++```
++REACT_APP_GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
++```
++6. Restart the client (`npm start`)
++
++If this variable isn't set, the "Sign in with Google" button simply doesn't render — email/password sign-in still works as before.
++
++**Note:** Google accounts are matched by email into the app's existing local user store (the same `localStorage`-based system used for email/password accounts) — there's no separate backend database.
+diff --git a/README.md b/README.md
+index 6159c7c19..e1430954d 100644
+--- a/README.md
++++ b/README.md
+@@ -7,6 +7,11 @@ A full-stack web application that helps you build professional resumes using AI.
+ - AI-powered resume content generation (OpenAI API)
+ - Live resume preview
+ - Download as PDF
++- Sign in with Google, or email/password
++- Personal dashboard: login count, CVs created, and job listings near your area
++- Built-in chatbot to answer questions about the app
++
++See `API_SETUP.md` for how to configure the job search API, chatbot, and Google Sign-In.
+ 
+ ## Project Structure
+ - `client/` — React frontend
+diff --git a/client/package.json b/client/package.json
+index b63a3decb..d5c333baa 100644
+--- a/client/package.json
++++ b/client/package.json
+@@ -7,8 +7,10 @@
+     "@emotion/styled": "^11.14.0",
+     "@mui/icons-material": "^7.1.2",
+     "@mui/material": "^7.1.2",
++    "@react-oauth/google": "^0.13.5",
+     "axios": "^1.6.7",
+     "jspdf": "^2.5.1",
++    "jwt-decode": "^4.0.0",
+     "react": "^18.2.0",
+     "react-dom": "^18.2.0",
+     "react-router-dom": "^6.23.0",
+diff --git a/client/src/App.css b/client/src/App.css
+index d42807111..38bfdf753 100644
+--- a/client/src/App.css
++++ b/client/src/App.css
+@@ -201,6 +201,35 @@ body {
+   text-decoration: underline;
+ }
+ 
++.auth-divider-section {
++  margin-top: 24px;
++}
++
++.auth-divider {
++  display: flex;
++  align-items: center;
++  text-align: center;
++  color: #94a3b8;
++  font-size: 0.85rem;
++  margin: 16px 0;
++}
++
++.auth-divider::before,
++.auth-divider::after {
++  content: '';
++  flex: 1;
++  border-bottom: 1px solid #e2e8f0;
++}
++
++.auth-divider span {
++  padding: 0 12px;
++}
++
++.google-login-wrapper {
++  display: flex;
++  justify-content: center;
++}
++
+ /* Template Gallery */
+ .template-gallery {
+   max-width: 1000px;
+diff --git a/client/src/App.js b/client/src/App.js
+index 33be2712a..f4a27ea13 100644
+--- a/client/src/App.js
++++ b/client/src/App.js
+@@ -1,19 +1,25 @@
+ import React, { useState, useContext, createContext, useEffect } from 'react';
+ import { Routes, Route, Link, useNavigate } from 'react-router-dom';
++import { GoogleOAuthProvider } from '@react-oauth/google';
+ import ResumeForm from './components/ResumeForm';
+ import ResumePreview from './components/ResumePreview';
+ import DownloadPDF from './components/DownloadPDF';
+ import TemplateSelector from './components/TemplateSelector';
+ import TemplateGallery from './components/TemplateGallery';
++import ChatbotWidget from './components/ChatbotWidget';
+ import Home from './pages/Home';
+ import Login from './pages/Login';
+ import Signup from './pages/Signup';
++import Dashboard from './pages/Dashboard';
+ import './App.css';
+ import { AppBar, Toolbar, Typography, IconButton, Box } from '@mui/material';
+ import Brightness4Icon from '@mui/icons-material/Brightness4';
+ import Brightness7Icon from '@mui/icons-material/Brightness7';
+ import { useColorMode } from './index';
+ import { useTheme } from '@mui/material/styles';
++import { recordLogin } from './utils/stats';
++
++const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
+ 
+ // Auth context for demo
+ const AuthContext = createContext();
+@@ -21,7 +27,11 @@ export function useAuth() { return useContext(AuthContext); }
+ 
+ function AuthProvider({ children }) {
+   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user')) || null);
+-  const login = (userObj) => { setUser(userObj); localStorage.setItem('user', JSON.stringify(userObj)); };
++  const login = (userObj) => {
++    setUser(userObj);
++    localStorage.setItem('user', JSON.stringify(userObj));
++    if (userObj?.email) recordLogin(userObj.email);
++  };
+   const logout = () => { setUser(null); localStorage.removeItem('user'); };
+   return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
+ }
+@@ -37,6 +47,7 @@ function Header() {
+       <nav>
+         <Link to="/templates">Templates</Link>
+         <Link to="/builder">Builder</Link>
++        {user && <Link to="/dashboard">Dashboard</Link>}
+         {user ? (
+           <>
+             <span className="user-email">{user.email}</span>
+@@ -82,9 +93,7 @@ function ResumeBuilderPage() {
+   );
+ }
+ 
+-function App() {
+-  const colorMode = useColorMode();
+-  const theme = useTheme();
++function AppBody() {
+   return (
+     <AuthProvider>
+       <Header />
+@@ -94,9 +103,26 @@ function App() {
+         <Route path="/signup" element={<Signup />} />
+         <Route path="/templates" element={<TemplateGallery />} />
+         <Route path="/builder" element={<ResumeBuilderPage />} />
++        <Route path="/dashboard" element={<Dashboard />} />
+       </Routes>
++      <ChatbotWidget />
+     </AuthProvider>
+   );
+ }
+ 
++function App() {
++  const colorMode = useColorMode();
++  const theme = useTheme();
++  // Google Sign-In only mounts once REACT_APP_GOOGLE_CLIENT_ID is set —
++  // without it, email/password auth still works fine.
++  if (GOOGLE_CLIENT_ID) {
++    return (
++      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
++        <AppBody />
++      </GoogleOAuthProvider>
++    );
++  }
++  return <AppBody />;
++}
++
+ export default App; 
+\ No newline at end of file
+diff --git a/client/src/components/ChatbotWidget.js b/client/src/components/ChatbotWidget.js
+new file mode 100644
+index 000000000..78aa7e9ed
+--- /dev/null
++++ b/client/src/components/ChatbotWidget.js
+@@ -0,0 +1,130 @@
++import React, { useState, useRef, useEffect } from 'react';
++import axios from 'axios';
++import {
++  Fab, Paper, Box, Typography, IconButton, TextField, Avatar, CircularProgress,
++} from '@mui/material';
++import ChatIcon from '@mui/icons-material/Chat';
++import CloseIcon from '@mui/icons-material/Close';
++import SendIcon from '@mui/icons-material/Send';
++import SmartToyIcon from '@mui/icons-material/SmartToy';
++
++const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
++
++const WELCOME_MESSAGE = {
++  role: 'assistant',
++  content: "Hi! I'm here to help with anything about building, enhancing, or downloading your resume — or your account. What can I help with?",
++};
++
++function ChatbotWidget() {
++  const [open, setOpen] = useState(false);
++  const [messages, setMessages] = useState([WELCOME_MESSAGE]);
++  const [input, setInput] = useState('');
++  const [loading, setLoading] = useState(false);
++  const bottomRef = useRef(null);
++
++  useEffect(() => {
++    if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
++  }, [messages, open]);
++
++  const sendMessage = async (e) => {
++    e.preventDefault();
++    const text = input.trim();
++    if (!text || loading) return;
++
++    const nextMessages = [...messages, { role: 'user', content: text }];
++    setMessages(nextMessages);
++    setInput('');
++    setLoading(true);
++
++    try {
++      const history = nextMessages
++        .filter(m => m !== WELCOME_MESSAGE)
++        .map(m => ({ role: m.role, content: m.content }));
++
++      const res = await axios.post(`${API_URL}/api/chatbot`, { message: text, history });
++      setMessages([...nextMessages, { role: 'assistant', content: res.data.reply }]);
++    } catch (err) {
++      setMessages([...nextMessages, {
++        role: 'assistant',
++        content: "Sorry, I'm having trouble responding right now. Please try again shortly.",
++      }]);
++    } finally {
++      setLoading(false);
++    }
++  };
++
++  return (
++    <>
++      {open && (
++        <Paper
++          elevation={6}
++          sx={{
++            position: 'fixed', bottom: 90, right: 24, width: 340, maxWidth: '90vw',
++            height: 440, display: 'flex', flexDirection: 'column', borderRadius: 3,
++            overflow: 'hidden', zIndex: 1300,
++          }}
++        >
++          <Box sx={{
++            bgcolor: 'primary.main', color: '#fff', px: 2, py: 1.5,
++            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
++          }}>
++            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
++              <SmartToyIcon fontSize="small" />
++              <Typography variant="subtitle1" fontWeight={700}>Resume Assistant</Typography>
++            </Box>
++            <IconButton size="small" onClick={() => setOpen(false)} sx={{ color: '#fff' }}>
++              <CloseIcon fontSize="small" />
++            </IconButton>
++          </Box>
++
++          <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
++            {messages.map((m, i) => (
++              <Box
++                key={i}
++                sx={{
++                  alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
++                  bgcolor: m.role === 'user' ? 'primary.main' : 'grey.100',
++                  color: m.role === 'user' ? '#fff' : 'text.primary',
++                  px: 1.5, py: 1, borderRadius: 2, maxWidth: '85%',
++                }}
++              >
++                <Typography variant="body2">{m.content}</Typography>
++              </Box>
++            ))}
++            {loading && (
++              <Box sx={{ alignSelf: 'flex-start', px: 1.5, py: 1 }}>
++                <CircularProgress size={18} />
++              </Box>
++            )}
++            <div ref={bottomRef} />
++          </Box>
++
++          <Box component="form" onSubmit={sendMessage} sx={{ display: 'flex', gap: 1, p: 1.5, borderTop: '1px solid #e2e8f0' }}>
++            <TextField
++              size="small"
++              fullWidth
++              placeholder="Ask a question…"
++              value={input}
++              onChange={(e) => setInput(e.target.value)}
++              disabled={loading}
++            />
++            <IconButton type="submit" color="primary" disabled={loading || !input.trim()}>
++              <SendIcon />
++            </IconButton>
++          </Box>
++        </Paper>
++      )}
++
++      <Fab
++        color="primary"
++        onClick={() => setOpen(o => !o)}
++        sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1300 }}
++        aria-label="Open chat assistant"
++      >
++        {open ? <CloseIcon /> : <ChatIcon />}
++      </Fab>
++    </>
++  );
++}
++
++export default ChatbotWidget;
+diff --git a/client/src/components/DownloadPDF.js b/client/src/components/DownloadPDF.js
+index 1d8cd8c75..04e6f80e6 100644
+--- a/client/src/components/DownloadPDF.js
++++ b/client/src/components/DownloadPDF.js
+@@ -2,8 +2,11 @@ import React from 'react';
+ import jsPDF from 'jspdf';
+ import { Button } from '@mui/material';
+ import DownloadIcon from '@mui/icons-material/Download';
++import { useAuth } from '../App';
++import { incrementCvCount } from '../utils/stats';
+ 
+ function DownloadPDF({ resumeData, template }) {
++  const { user } = useAuth();
+   const handleDownload = () => {
+     if (!resumeData || !resumeData.name) {
+       alert('Please fill in your resume details before downloading.');
+@@ -170,6 +173,10 @@ function DownloadPDF({ resumeData, template }) {
+     }
+     
+     doc.save(`resume-${template}.pdf`);
++
++    if (user?.email) {
++      incrementCvCount(user.email);
++    }
+   };
+ 
+   return (
+diff --git a/client/src/pages/Dashboard.js b/client/src/pages/Dashboard.js
+new file mode 100644
+index 000000000..0a3f7ef58
+--- /dev/null
++++ b/client/src/pages/Dashboard.js
+@@ -0,0 +1,151 @@
++import React, { useEffect, useState } from 'react';
++import { Link } from 'react-router-dom';
++import axios from 'axios';
++import {
++  Container, Grid, Card, CardContent, Typography, TextField, Button,
++  CircularProgress, Box, Chip,
++} from '@mui/material';
++import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
++import LoginIcon from '@mui/icons-material/Login';
++import DescriptionIcon from '@mui/icons-material/Description';
++import { useAuth } from '../App';
++import { getStats } from '../utils/stats';
++
++const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
++
++function StatCard({ icon, label, value }) {
++  return (
++    <Card sx={{ height: '100%' }}>
++      <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
++        <Box sx={{ color: 'primary.main' }}>{icon}</Box>
++        <Box>
++          <Typography variant="h4" fontWeight={700}>{value}</Typography>
++          <Typography variant="body2" color="text.secondary">{label}</Typography>
++        </Box>
++      </CardContent>
++    </Card>
++  );
++}
++
++function Dashboard() {
++  const { user } = useAuth();
++  const [stats, setStats] = useState({ logins: 0, cvsCreated: 0 });
++  const [location, setLocation] = useState(() => localStorage.getItem('dashboard_location') || '');
++  const [jobs, setJobs] = useState([]);
++  const [jobsLoading, setJobsLoading] = useState(false);
++  const [jobsNote, setJobsNote] = useState('');
++
++  useEffect(() => {
++    if (user?.email) setStats(getStats(user.email));
++  }, [user]);
++
++  const fetchJobs = async (loc) => {
++    setJobsLoading(true);
++    setJobsNote('');
++    try {
++      const res = await axios.get(`${API_URL}/api/jobs`, { params: { location: loc } });
++      setJobs(res.data.jobs || []);
++      if (res.data.note) setJobsNote(res.data.note);
++    } catch (err) {
++      setJobsNote('Could not load job listings right now. Please try again later.');
++      setJobs([]);
++    } finally {
++      setJobsLoading(false);
++    }
++  };
++
++  useEffect(() => {
++    fetchJobs(location);
++  }, []);
++
++  const handleLocationSubmit = (e) => {
++    e.preventDefault();
++    localStorage.setItem('dashboard_location', location);
++    fetchJobs(location);
++  };
++
++  if (!user) {
++    return (
++      <div className="locked-msg">
++        Please <Link to="/login">log in</Link> to view your dashboard.
++      </div>
++    );
++  }
++
++  return (
++    <Container maxWidth="lg" sx={{ mt: 6, mb: 6 }}>
++      <Typography variant="h4" fontWeight={700} gutterBottom>
++        Welcome back{user.name ? `, ${user.name}` : ''}
++      </Typography>
++      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
++        Here's what's happening with your account.
++      </Typography>
++
++      <Grid container spacing={3} sx={{ mb: 5 }}>
++        <Grid item xs={12} sm={6} md={4}>
++          <StatCard icon={<LoginIcon fontSize="large" />} label="Times logged in" value={stats.logins} />
++        </Grid>
++        <Grid item xs={12} sm={6} md={4}>
++          <StatCard icon={<DescriptionIcon fontSize="large" />} label="CVs created" value={stats.cvsCreated} />
++        </Grid>
++        <Grid item xs={12} sm={6} md={4}>
++          <StatCard icon={<WorkOutlineIcon fontSize="large" />} label="Jobs found nearby" value={jobs.length} />
++        </Grid>
++      </Grid>
++
++      <Typography variant="h5" fontWeight={700} gutterBottom>
++        Jobs near you
++      </Typography>
++      <Box component="form" onSubmit={handleLocationSubmit} sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
++        <TextField
++          label="Your area (e.g. Nairobi)"
++          value={location}
++          onChange={(e) => setLocation(e.target.value)}
++          size="small"
++          sx={{ minWidth: 240 }}
++        />
++        <Button type="submit" variant="contained" disabled={jobsLoading}>
++          {jobsLoading ? 'Searching…' : 'Search jobs'}
++        </Button>
++      </Box>
++
++      {jobsNote && (
++        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
++          {jobsNote}
++        </Typography>
++      )}
++
++      {jobsLoading ? (
++        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
++          <CircularProgress />
++        </Box>
++      ) : (
++        <Grid container spacing={2}>
++          {jobs.map((job, i) => (
++            <Grid item xs={12} md={6} key={i}>
++              <Card variant="outlined">
++                <CardContent>
++                  <Typography variant="h6">{job.title}</Typography>
++                  <Typography variant="body2" color="text.secondary">
++                    {job.company} · {job.location}
++                  </Typography>
++                  {job.salary && <Chip size="small" label={job.salary} sx={{ mt: 1, mr: 1 }} />}
++                  {job.url && job.url !== '#' && (
++                    <Box sx={{ mt: 1 }}>
++                      <a href={job.url} target="_blank" rel="noopener noreferrer">View job</a>
++                    </Box>
++                  )}
++                </CardContent>
++              </Card>
++            </Grid>
++          ))}
++          {!jobs.length && !jobsNote && (
++            <Typography variant="body2" color="text.secondary">No jobs found for that area yet.</Typography>
++          )}
++        </Grid>
++      )}
++    </Container>
++  );
++}
++
++export default Dashboard;
+diff --git a/client/src/pages/Home.js b/client/src/pages/Home.js
+index dc92424dd..5c38634d8 100644
+--- a/client/src/pages/Home.js
++++ b/client/src/pages/Home.js
+@@ -1,23 +1,33 @@
+ import React from 'react';
+ import { Link } from 'react-router-dom';
+ import { Container, Box, Typography } from '@mui/material';
++import { useAuth } from '../App';
+ 
+ function Home() {
++  const { user } = useAuth();
++
+   return (
+     <Container maxWidth="md" sx={{ mt: 8 }}>
+       <Box sx={{ textAlign: 'center', mb: 6 }}>
+         <Typography variant="h2" gutterBottom>Welcome to ResumeBuilder</Typography>
+         <Typography variant="h5" color="textSecondary">Create a professional resume in minutes with beautiful templates and AI assistance.</Typography>
+       </Box>
+-      <Box sx={{ textAlign: 'center' }}>
++      <Box sx={{ textAlign: 'center', display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+         <Link to="/templates" className="get-started-btn">
+           <Typography variant="button" sx={{ fontSize: 20, px: 4, py: 2, bgcolor: 'primary.main', color: '#fff', borderRadius: 2, textDecoration: 'none', '&:hover': { bgcolor: 'primary.dark' } }}>
+             Get Started
+           </Typography>
+         </Link>
++        {user && (
++          <Link to="/dashboard" className="get-started-btn">
++            <Typography variant="button" sx={{ fontSize: 20, px: 4, py: 2, border: '2px solid', borderColor: 'primary.main', color: 'primary.main', borderRadius: 2, textDecoration: 'none' }}>
++              View Your Dashboard
++            </Typography>
++          </Link>
++        )}
+       </Box>
+     </Container>
+   );
+ }
+ 
+-export default Home; 
+\ No newline at end of file
++export default Home;
+diff --git a/client/src/pages/Login.js b/client/src/pages/Login.js
+index ed2c298b3..e5942d93f 100644
+--- a/client/src/pages/Login.js
++++ b/client/src/pages/Login.js
+@@ -1,7 +1,11 @@
+ import React, { useState } from 'react';
+ import { useNavigate, Link } from 'react-router-dom';
++import { GoogleLogin } from '@react-oauth/google';
++import { jwtDecode } from 'jwt-decode';
+ import { useAuth } from '../App';
+ 
++const GOOGLE_ENABLED = Boolean(process.env.REACT_APP_GOOGLE_CLIENT_ID);
++
+ function Login() {
+   const [email, setEmail] = useState('');
+   const [password, setPassword] = useState('');
+@@ -21,6 +25,26 @@ function Login() {
+     }
+   };
+ 
++  const handleGoogleSuccess = (credentialResponse) => {
++    try {
++      const decoded = jwtDecode(credentialResponse.credential);
++      const { email: googleEmail, name, picture } = decoded;
++
++      // Register the Google account locally if it hasn't signed in before,
++      // matching the app's existing localStorage-based user store.
++      const users = JSON.parse(localStorage.getItem('users') || '[]');
++      if (!users.find(u => u.email === googleEmail)) {
++        users.push({ email: googleEmail, name, provider: 'google' });
++        localStorage.setItem('users', JSON.stringify(users));
++      }
++
++      login({ email: googleEmail, name, picture, provider: 'google' });
++      navigate('/builder');
++    } catch (err) {
++      setError('Could not sign in with Google. Please try again.');
++    }
++  };
++
+   return (
+     <div className="auth-page">
+       <h2>Log In</h2>
+@@ -30,9 +54,24 @@ function Login() {
+         <button type="submit">Log In</button>
+         {error && <div className="auth-error">{error}</div>}
+       </form>
++
++      {GOOGLE_ENABLED && (
++        <div className="auth-divider-section">
++          <div className="auth-divider"><span>or</span></div>
++          <div className="google-login-wrapper">
++            <GoogleLogin
++              onSuccess={handleGoogleSuccess}
++              onError={() => setError('Google sign-in failed. Please try again.')}
++              text="signin_with"
++              width="100%"
++            />
++          </div>
++        </div>
++      )}
++
+       <p>Don't have an account? <Link to="/signup">Sign Up</Link></p>
+     </div>
+   );
+ }
+ 
+-export default Login; 
+\ No newline at end of file
++export default Login;
+diff --git a/client/src/pages/Signup.js b/client/src/pages/Signup.js
+index 0cdf093c2..dc1ebd70c 100644
+--- a/client/src/pages/Signup.js
++++ b/client/src/pages/Signup.js
+@@ -1,7 +1,11 @@
+ import React, { useState } from 'react';
+ import { useNavigate, Link } from 'react-router-dom';
++import { GoogleLogin } from '@react-oauth/google';
++import { jwtDecode } from 'jwt-decode';
+ import { useAuth } from '../App';
+ 
++const GOOGLE_ENABLED = Boolean(process.env.REACT_APP_GOOGLE_CLIENT_ID);
++
+ function Signup() {
+   const [email, setEmail] = useState('');
+   const [password, setPassword] = useState('');
+@@ -22,6 +26,24 @@ function Signup() {
+     navigate('/builder');
+   };
+ 
++  const handleGoogleSuccess = (credentialResponse) => {
++    try {
++      const decoded = jwtDecode(credentialResponse.credential);
++      const { email: googleEmail, name, picture } = decoded;
++
++      const users = JSON.parse(localStorage.getItem('users') || '[]');
++      if (!users.find(u => u.email === googleEmail)) {
++        users.push({ email: googleEmail, name, provider: 'google' });
++        localStorage.setItem('users', JSON.stringify(users));
++      }
++
++      login({ email: googleEmail, name, picture, provider: 'google' });
++      navigate('/builder');
++    } catch (err) {
++      setError('Could not sign up with Google. Please try again.');
++    }
++  };
++
+   return (
+     <div className="auth-page">
+       <h2>Sign Up</h2>
+@@ -31,9 +53,24 @@ function Signup() {
+         <button type="submit">Sign Up</button>
+         {error && <div className="auth-error">{error}</div>}
+       </form>
++
++      {GOOGLE_ENABLED && (
++        <div className="auth-divider-section">
++          <div className="auth-divider"><span>or</span></div>
++          <div className="google-login-wrapper">
++            <GoogleLogin
++              onSuccess={handleGoogleSuccess}
++              onError={() => setError('Google sign-up failed. Please try again.')}
++              text="signup_with"
++              width="100%"
++            />
++          </div>
++        </div>
++      )}
++
+       <p>Already have an account? <Link to="/login">Log In</Link></p>
+     </div>
+   );
+ }
+ 
+-export default Signup; 
+\ No newline at end of file
++export default Signup;
+diff --git a/client/src/utils/stats.js b/client/src/utils/stats.js
+new file mode 100644
+index 000000000..65a2cccd5
+--- /dev/null
++++ b/client/src/utils/stats.js
+@@ -0,0 +1,31 @@
++// Lightweight per-user usage stats, stored in localStorage alongside the
++// app's existing localStorage-based auth. No backend/database involved —
++// mirrors how `users` and `user` are already stored in App.js.
++
++const statsKey = (email) => `stats_${email}`;
++
++export function getStats(email) {
++  if (!email) return { logins: 0, cvsCreated: 0, lastLogin: null };
++  const raw = localStorage.getItem(statsKey(email));
++  return raw ? JSON.parse(raw) : { logins: 0, cvsCreated: 0, lastLogin: null };
++}
++
++function saveStats(email, stats) {
++  localStorage.setItem(statsKey(email), JSON.stringify(stats));
++  return stats;
++}
++
++export function recordLogin(email) {
++  if (!email) return getStats(email);
++  const stats = getStats(email);
++  stats.logins += 1;
++  stats.lastLogin = new Date().toISOString();
++  return saveStats(email, stats);
++}
++
++export function incrementCvCount(email) {
++  if (!email) return getStats(email);
++  const stats = getStats(email);
++  stats.cvsCreated += 1;
++  return saveStats(email, stats);
++}
+diff --git a/package-lock.json b/package-lock.json
+index 96470b9ce..65f2c4c82 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -23,8 +23,10 @@
+         "@emotion/styled": "^11.14.0",
+         "@mui/icons-material": "^7.1.2",
+         "@mui/material": "^7.1.2",
++        "@react-oauth/google": "^0.13.5",
+         "axios": "^1.6.7",
+         "jspdf": "^2.5.1",
++        "jwt-decode": "^4.0.0",
+         "react": "^18.2.0",
+         "react-dom": "^18.2.0",
+         "react-router-dom": "^6.23.0",
+@@ -3760,6 +3762,16 @@
+         "node": ">=12"
+       }
+     },
++    "node_modules/@react-oauth/google": {
++      "version": "0.13.5",
++      "resolved": "https://registry.npmjs.org/@react-oauth/google/-/google-0.13.5.tgz",
++      "integrity": "sha512-xQWri2s/3nNekZJ4uuov2aAfQYu83bN3864KcFqw2pK1nNbFurQIjPFDXhWaKH3IjYJ2r/9yyIIpsn5lMqrheQ==",
++      "license": "MIT",
++      "peerDependencies": {
++        "react": ">=16.8.0",
++        "react-dom": ">=16.8.0"
++      }
++    },
+     "node_modules/@remix-run/router": {
+       "version": "1.23.0",
+       "resolved": "https://registry.npmjs.org/@remix-run/router/-/router-1.23.0.tgz",
+@@ -12724,6 +12736,15 @@
+         "node": ">=4.0"
+       }
+     },
++    "node_modules/jwt-decode": {
++      "version": "4.0.0",
++      "resolved": "https://registry.npmjs.org/jwt-decode/-/jwt-decode-4.0.0.tgz",
++      "integrity": "sha512-+KJGIyHgkGuIq3IEBNftfhW/LfWhXUIY6OmyVWjliu5KH1y0fw7VQ8YndE2O4qZdMSd9SqbnC8GOcZEy0Om7sA==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=18"
++      }
++    },
+     "node_modules/keyv": {
+       "version": "4.5.4",
+       "resolved": "https://registry.npmjs.org/keyv/-/keyv-4.5.4.tgz",
+diff --git a/server/index.js b/server/index.js
+index 776920cd2..f10f6ee5e 100644
+--- a/server/index.js
++++ b/server/index.js
+@@ -146,5 +146,136 @@ app.post('/api/ai-resume', async (req, res) => {
+   }
+ });
+ 
++// ---------------------------------------------------------------------------
++// Jobs near you
++// ---------------------------------------------------------------------------
++const ADZUNA_APP_ID = process.env.ADZUNA_APP_ID;
++const ADZUNA_APP_KEY = process.env.ADZUNA_APP_KEY;
++const ADZUNA_COUNTRY = process.env.ADZUNA_COUNTRY || 'gb'; // Adzuna's supported country code, e.g. gb, us, za
++
++const MOCK_JOBS = [
++  { title: 'IT Support Specialist', company: 'Sample Co.', location: 'Nairobi, Kenya', url: '#', salary: null, posted: null },
++  { title: 'ERP / Dynamics 365 Administrator', company: 'Sample Ltd.', location: 'Nairobi, Kenya', url: '#', salary: null, posted: null },
++  { title: 'Frontend Developer (React)', company: 'Sample Studio', location: 'Remote', url: '#', salary: null, posted: null },
++  { title: 'Network & Systems Administrator', company: 'Sample Group', location: 'Nairobi, Kenya', url: '#', salary: null, posted: null },
++  { title: 'Power Platform Developer', company: 'Sample Solutions', location: 'Remote', url: '#', salary: null, posted: null },
++  { title: 'Customer Support Associate', company: 'Sample Inc.', location: 'Nairobi, Kenya', url: '#', salary: null, posted: null },
++];
++
++app.get('/api/jobs', async (req, res) => {
++  const location = (req.query.location || '').trim();
++  const keywords = (req.query.keywords || '').trim();
++
++  if (!ADZUNA_APP_ID || !ADZUNA_APP_KEY) {
++    const filtered = location
++      ? MOCK_JOBS.filter(j => j.location.toLowerCase().includes(location.toLowerCase()))
++      : MOCK_JOBS;
++    return res.json({
++      jobs: (filtered.length ? filtered : MOCK_JOBS).slice(0, 6),
++      source: 'sample',
++      note: 'Sample jobs shown — add ADZUNA_APP_ID and ADZUNA_APP_KEY to server/.env for live listings.',
++    });
++  }
++
++  try {
++    const url = `https://api.adzuna.com/v1/api/jobs/${ADZUNA_COUNTRY}/search/1`;
++    const response = await axios.get(url, {
++      params: {
++        app_id: ADZUNA_APP_ID,
++        app_key: ADZUNA_APP_KEY,
++        results_per_page: 6,
++        what: keywords || undefined,
++        where: location || undefined,
++        'content-type': 'application/json',
++      },
++      timeout: 15000,
++    });
++
++    const jobs = (response.data.results || []).map(j => ({
++      title: j.title,
++      company: j.company?.display_name || 'Unknown',
++      location: j.location?.display_name || location || 'N/A',
++      url: j.redirect_url,
++      salary: j.salary_min && j.salary_max ? `${Math.round(j.salary_min)} - ${Math.round(j.salary_max)}` : null,
++      posted: j.created,
++    }));
++
++    res.json({ jobs, source: 'adzuna' });
++  } catch (err) {
++    console.error('Adzuna jobs error:', err?.response?.data || err.message);
++    res.json({
++      jobs: MOCK_JOBS.slice(0, 6),
++      source: 'sample',
++      note: 'Live job search is temporarily unavailable — showing sample listings.',
++    });
++  }
++});
++
++// ---------------------------------------------------------------------------
++// Chatbot — enquiry assistant
++// ---------------------------------------------------------------------------
++const CHATBOT_SYSTEM_PROMPT = `You are the friendly support assistant embedded in "ResumeBuilder", an AI-powered resume builder web app.
++Help users with: choosing templates, using the AI enhancement feature, downloading their resume as a PDF, creating an account or signing in (including with Google), understanding their dashboard stats, and general resume/job-search tips.
++Keep replies short — 2 to 4 sentences, friendly and practical. If you don't know something app-specific, say so honestly and suggest they contact support instead of guessing.`;
++
++function cannedChatbotReply(message) {
++  const text = message.toLowerCase();
++  if (text.includes('pdf') || text.includes('download')) {
++    return 'To download your resume, fill in the builder form and click "Download PDF" on the preview panel — it saves using whichever template you\'ve selected.';
++  }
++  if (text.includes('template')) {
++    return 'You can browse and pick a resume template from the Templates page, then head to the Builder to fill in your details with that template applied.';
++  }
++  if (text.includes('ai') || text.includes('enhance')) {
++    return 'The "Enhance with AI" option in the builder rewrites your summary, experience, and skills to be more recruiter-ready — just fill in your raw details first.';
++  }
++  if (text.includes('google') || text.includes('sign in') || text.includes('login') || text.includes('log in')) {
++    return 'You can sign in or sign up using your Google account with the "Sign in with Google" button on the Login/Signup pages, or use an email and password.';
++  }
++  if (text.includes('job')) {
++    return 'Your Dashboard shows job listings near your area — enter your city there and we\'ll pull in current openings for you.';
++  }
++  return "I'm here to help with anything about building, enhancing, or downloading your resume, your account, or your dashboard. Could you tell me a bit more about what you need?";
++}
++
++app.post('/api/chatbot', async (req, res) => {
++  const { message, history } = req.body;
++  if (!message || !String(message).trim()) {
++    return res.status(400).json({ error: 'Message is required' });
++  }
++
++  if (!OPENROUTER_API_KEY) {
++    return res.json({ reply: cannedChatbotReply(message), source: 'fallback' });
++  }
++
++  try {
++    const messages = [
++      { role: 'system', content: CHATBOT_SYSTEM_PROMPT },
++      ...(Array.isArray(history) ? history.slice(-6) : []),
++      { role: 'user', content: message },
++    ];
++
++    const response = await axios.post(
++      'https://openrouter.ai/api/v1/chat/completions',
++      { model: OPENROUTER_MODEL, messages, max_tokens: 300, temperature: 0.6 },
++      {
++        headers: {
++          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
++          'Content-Type': 'application/json',
++          'HTTP-Referer': 'http://localhost:3000',
++          'X-Title': 'ResumeBuilder',
++        },
++        timeout: 30000,
++      }
++    );
++
++    const reply = response.data.choices?.[0]?.message?.content?.trim() || cannedChatbotReply(message);
++    res.json({ reply, source: 'ai' });
++  } catch (err) {
++    console.error('Chatbot error:', err?.response?.data || err.message);
++    res.json({ reply: cannedChatbotReply(message), source: 'fallback' });
++  }
++});
++
+ const PORT = process.env.PORT || 5000;
+ app.listen(PORT, () => console.log(`Server running on port ${PORT} (AI model: ${OPENROUTER_MODEL})`));
+\ No newline at end of file

@@ -146,5 +146,136 @@ app.post('/api/ai-resume', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Jobs near you
+// ---------------------------------------------------------------------------
+const ADZUNA_APP_ID = process.env.ADZUNA_APP_ID;
+const ADZUNA_APP_KEY = process.env.ADZUNA_APP_KEY;
+const ADZUNA_COUNTRY = process.env.ADZUNA_COUNTRY || 'gb'; // Adzuna's supported country code, e.g. gb, us, za
+
+const MOCK_JOBS = [
+  { title: 'IT Support Specialist', company: 'Sample Co.', location: 'Nairobi, Kenya', url: '#', salary: null, posted: null },
+  { title: 'ERP / Dynamics 365 Administrator', company: 'Sample Ltd.', location: 'Nairobi, Kenya', url: '#', salary: null, posted: null },
+  { title: 'Frontend Developer (React)', company: 'Sample Studio', location: 'Remote', url: '#', salary: null, posted: null },
+  { title: 'Network & Systems Administrator', company: 'Sample Group', location: 'Nairobi, Kenya', url: '#', salary: null, posted: null },
+  { title: 'Power Platform Developer', company: 'Sample Solutions', location: 'Remote', url: '#', salary: null, posted: null },
+  { title: 'Customer Support Associate', company: 'Sample Inc.', location: 'Nairobi, Kenya', url: '#', salary: null, posted: null },
+];
+
+app.get('/api/jobs', async (req, res) => {
+  const location = (req.query.location || '').trim();
+  const keywords = (req.query.keywords || '').trim();
+
+  if (!ADZUNA_APP_ID || !ADZUNA_APP_KEY) {
+    const filtered = location
+      ? MOCK_JOBS.filter(j => j.location.toLowerCase().includes(location.toLowerCase()))
+      : MOCK_JOBS;
+    return res.json({
+      jobs: (filtered.length ? filtered : MOCK_JOBS).slice(0, 6),
+      source: 'sample',
+      note: 'Sample jobs shown — add ADZUNA_APP_ID and ADZUNA_APP_KEY to server/.env for live listings.',
+    });
+  }
+
+  try {
+    const url = `https://api.adzuna.com/v1/api/jobs/${ADZUNA_COUNTRY}/search/1`;
+    const response = await axios.get(url, {
+      params: {
+        app_id: ADZUNA_APP_ID,
+        app_key: ADZUNA_APP_KEY,
+        results_per_page: 6,
+        what: keywords || undefined,
+        where: location || undefined,
+        'content-type': 'application/json',
+      },
+      timeout: 15000,
+    });
+
+    const jobs = (response.data.results || []).map(j => ({
+      title: j.title,
+      company: j.company?.display_name || 'Unknown',
+      location: j.location?.display_name || location || 'N/A',
+      url: j.redirect_url,
+      salary: j.salary_min && j.salary_max ? `${Math.round(j.salary_min)} - ${Math.round(j.salary_max)}` : null,
+      posted: j.created,
+    }));
+
+    res.json({ jobs, source: 'adzuna' });
+  } catch (err) {
+    console.error('Adzuna jobs error:', err?.response?.data || err.message);
+    res.json({
+      jobs: MOCK_JOBS.slice(0, 6),
+      source: 'sample',
+      note: 'Live job search is temporarily unavailable — showing sample listings.',
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Chatbot — enquiry assistant
+// ---------------------------------------------------------------------------
+const CHATBOT_SYSTEM_PROMPT = `You are the friendly support assistant embedded in "ResumeBuilder", an AI-powered resume builder web app.
+Help users with: choosing templates, using the AI enhancement feature, downloading their resume as a PDF, creating an account or signing in (including with Google), understanding their dashboard stats, and general resume/job-search tips.
+Keep replies short — 2 to 4 sentences, friendly and practical. If you don't know something app-specific, say so honestly and suggest they contact support instead of guessing.`;
+
+function cannedChatbotReply(message) {
+  const text = message.toLowerCase();
+  if (text.includes('pdf') || text.includes('download')) {
+    return 'To download your resume, fill in the builder form and click "Download PDF" on the preview panel — it saves using whichever template you\'ve selected.';
+  }
+  if (text.includes('template')) {
+    return 'You can browse and pick a resume template from the Templates page, then head to the Builder to fill in your details with that template applied.';
+  }
+  if (text.includes('ai') || text.includes('enhance')) {
+    return 'The "Enhance with AI" option in the builder rewrites your summary, experience, and skills to be more recruiter-ready — just fill in your raw details first.';
+  }
+  if (text.includes('google') || text.includes('sign in') || text.includes('login') || text.includes('log in')) {
+    return 'You can sign in or sign up using your Google account with the "Sign in with Google" button on the Login/Signup pages, or use an email and password.';
+  }
+  if (text.includes('job')) {
+    return 'Your Dashboard shows job listings near your area — enter your city there and we\'ll pull in current openings for you.';
+  }
+  return "I'm here to help with anything about building, enhancing, or downloading your resume, your account, or your dashboard. Could you tell me a bit more about what you need?";
+}
+
+app.post('/api/chatbot', async (req, res) => {
+  const { message, history } = req.body;
+  if (!message || !String(message).trim()) {
+    return res.status(400).json({ error: 'Message is required' });
+  }
+
+  if (!OPENROUTER_API_KEY) {
+    return res.json({ reply: cannedChatbotReply(message), source: 'fallback' });
+  }
+
+  try {
+    const messages = [
+      { role: 'system', content: CHATBOT_SYSTEM_PROMPT },
+      ...(Array.isArray(history) ? history.slice(-6) : []),
+      { role: 'user', content: message },
+    ];
+
+    const response = await axios.post(
+      'https://openrouter.ai/api/v1/chat/completions',
+      { model: OPENROUTER_MODEL, messages, max_tokens: 300, temperature: 0.6 },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'http://localhost:3000',
+          'X-Title': 'ResumeBuilder',
+        },
+        timeout: 30000,
+      }
+    );
+
+    const reply = response.data.choices?.[0]?.message?.content?.trim() || cannedChatbotReply(message);
+    res.json({ reply, source: 'ai' });
+  } catch (err) {
+    console.error('Chatbot error:', err?.response?.data || err.message);
+    res.json({ reply: cannedChatbotReply(message), source: 'fallback' });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT} (AI model: ${OPENROUTER_MODEL})`));

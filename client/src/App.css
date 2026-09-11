@@ -201,6 +201,35 @@ body {
   text-decoration: underline;
 }
 
+.auth-divider-section {
+  margin-top: 24px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin: 16px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.auth-divider span {
+  padding: 0 12px;
+}
+
+.google-login-wrapper {
+  display: flex;
+  justify-content: center;
+}
+
 /* Template Gallery */
 .template-gallery {
   max-width: 1000px;

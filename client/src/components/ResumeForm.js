@@ -52,7 +52,7 @@ function ResumeForm({ setResumeData }) {
       const aiData = { ...form, image };
       setResumeData(aiData);
       const payload = { ...form };
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const API_URL = process.env.REACT_APP_API_URL || 'https://airesume-builder-o7gf.onrender.com';
       const res = await axios.post(`${API_URL}/api/ai-resume`, payload);
       const enhanced = {
         name: res.data.name ?? form.name,

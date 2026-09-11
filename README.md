@@ -7,6 +7,11 @@ A full-stack web application that helps you build professional resumes using AI.
 - AI-powered resume content generation (OpenAI API)
 - Live resume preview
 - Download as PDF
+- Sign in with Google, or email/password
+- Personal dashboard: login count, CVs created, and job listings near your area
+- Built-in chatbot to answer questions about the app
+
+See `API_SETUP.md` for how to configure the job search API, chatbot, and Google Sign-In.
 
 ## Project Structure
 - `client/` — React frontend
