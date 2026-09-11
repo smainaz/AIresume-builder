@@ -10,6 +10,9 @@ import PeopleIcon from '@mui/icons-material/People';
 import DescriptionIcon from '@mui/icons-material/Description';
 import LoginIcon from '@mui/icons-material/Login';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from 'recharts';
 import { useAuth } from '../App';
 import { TEMPLATES } from '../data/templates';
 import {
@@ -120,6 +123,25 @@ function AdminDashboard() {
           </Card>
         </Grid>
       </Grid>
+
+      <Typography variant="h5" fontWeight={700} gutterBottom>Activity by user</Typography>
+      <Paper sx={{ p: 2, mb: 5 }}>
+        {users.length ? (
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={users.map(u => ({ name: u.email.split('@')[0], Logins: u.stats?.logins || 0, Resumes: u.stats?.cvsCreated || 0 }))}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EDE4FB" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="Logins" fill="#5323A4" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Resumes" fill="#F5B841" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <Typography variant="body2" color="text.secondary">No user activity yet.</Typography>
+        )}
+      </Paper>
 
       <Typography variant="h5" fontWeight={700} gutterBottom>Users</Typography>
       <TableContainer component={Paper} sx={{ mb: 5 }}>

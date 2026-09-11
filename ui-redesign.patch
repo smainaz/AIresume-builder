@@ -1,0 +1,1197 @@
+diff --git a/client/package.json b/client/package.json
+index d5c333baa..75207aa8e 100644
+--- a/client/package.json
++++ b/client/package.json
+@@ -14,7 +14,8 @@
+     "react": "^18.2.0",
+     "react-dom": "^18.2.0",
+     "react-router-dom": "^6.23.0",
+-    "react-scripts": "5.0.1"
++    "react-scripts": "5.0.1",
++    "recharts": "^2.12.7"
+   },
+   "scripts": {
+     "start": "react-scripts start",
+diff --git a/client/src/App.css b/client/src/App.css
+index 38bfdf753..811dd9d09 100644
+--- a/client/src/App.css
++++ b/client/src/App.css
+@@ -1,4 +1,4 @@
+-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
++@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+ 
+ html, body, #root {
+   height: 100%;
+@@ -9,15 +9,16 @@ html, body, #root {
+ 
+ body {
+   font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+-  background: linear-gradient(120deg, #e0e7ff 0%, #f8fafc 100%);
++  background: #F7F5FB;
+   margin: 0;
+   padding: 0;
++  overflow-x: hidden;
+ }
+ 
+ /* Header Styles */
+ .main-header {
+-  background: #fff;
+-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
++  background: linear-gradient(100deg, #2E1065 0%, #3D1A78 100%);
++  box-shadow: 0 4px 20px rgba(46, 16, 101, 0.25);
+   padding: 0 32px;
+   display: flex;
+   justify-content: space-between;
+@@ -26,18 +27,21 @@ body {
+   position: sticky;
+   top: 0;
+   z-index: 100;
++  color: #fff;
+ }
+ 
+ .logo {
+-  font-size: 1.5rem;
+-  font-weight: 800;
+-  color: #3730a3;
++  font-family: 'Space Grotesk', 'Inter', sans-serif;
++  font-size: 1.4rem;
++  font-weight: 700;
++  color: #fff;
+   text-decoration: none;
+   transition: color 0.2s;
++  letter-spacing: -0.02em;
+ }
+ 
+ .logo:hover {
+-  color: #6366f1;
++  color: #F5B841;
+ }
+ 
+ .main-header nav {
+@@ -47,29 +51,29 @@ body {
+ }
+ 
+ .main-header nav a {
+-  color: #64748b;
++  color: rgba(255,255,255,0.78);
+   text-decoration: none;
+   font-weight: 600;
+-  transition: color 0.2s;
++  transition: color 0.2s, background 0.2s;
+   padding: 8px 16px;
+   border-radius: 6px;
+ }
+ 
+ .main-header nav a:hover {
+-  color: #6366f1;
+-  background: #f1f5f9;
++  color: #fff;
++  background: rgba(245, 184, 65, 0.18);
+ }
+ 
+ .user-email {
+-  color: #6366f1;
++  color: #F5B841;
+   font-weight: 600;
+   font-size: 0.9rem;
+ }
+ 
+ .logout-btn {
+-  background: #ef4444;
++  background: rgba(255,255,255,0.12);
+   color: #fff;
+-  border: none;
++  border: 1px solid rgba(255,255,255,0.3);
+   padding: 8px 16px;
+   border-radius: 6px;
+   font-weight: 600;
+@@ -78,48 +82,173 @@ body {
+ }
+ 
+ .logout-btn:hover {
+-  background: #dc2626;
++  background: rgba(239, 68, 68, 0.85);
++  border-color: transparent;
++}
++
++/* Hero (Home Page) */
++.hero {
++  position: relative;
++  overflow: hidden;
++  background: #2E1065;
++  padding: 96px 32px 110px;
++  margin: -1px -50vw 0;
++  padding-left: calc(32px + 50vw);
++  padding-right: calc(32px + 50vw);
++  width: 100vw;
++  margin-left: calc(-50vw + 50%);
++  margin-right: calc(-50vw + 50%);
++}
++
++.hero::before,
++.hero::after {
++  content: '';
++  position: absolute;
++  border-radius: 50%;
++  filter: blur(70px);
++  opacity: 0.55;
++  pointer-events: none;
++}
++
++.hero::before {
++  width: 480px;
++  height: 480px;
++  background: #5323A4;
++  top: -180px;
++  left: 8%;
++  animation: heroDrift1 22s ease-in-out infinite alternate;
++}
++
++.hero::after {
++  width: 420px;
++  height: 420px;
++  background: #F5B841;
++  opacity: 0.35;
++  bottom: -220px;
++  right: 10%;
++  animation: heroDrift2 26s ease-in-out infinite alternate;
++}
++
++@keyframes heroDrift1 {
++  from { transform: translate(0, 0) scale(1); }
++  to { transform: translate(60px, 40px) scale(1.12); }
++}
++
++@keyframes heroDrift2 {
++  from { transform: translate(0, 0) scale(1); }
++  to { transform: translate(-50px, -30px) scale(1.08); }
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .hero::before, .hero::after {
++    animation: none;
++  }
++}
++
++.hero-content {
++  position: relative;
++  z-index: 1;
++  max-width: 720px;
++  margin: 0 auto;
++  text-align: center;
+ }
+ 
+-/* Home Page */
+ .home-page {
+   max-width: 800px;
+-  margin: 80px auto;
++  margin: 0 auto;
+   text-align: center;
+   padding: 0 32px;
+ }
+ 
+ .home-page h1 {
+-  font-size: 3rem;
+-  font-weight: 800;
+-  color: #2d3a4a;
+-  margin-bottom: 24px;
+-  letter-spacing: -1px;
++  font-family: 'Space Grotesk', 'Inter', sans-serif;
++  font-size: 3.2rem;
++  font-weight: 700;
++  color: #fff;
++  margin-bottom: 20px;
++  letter-spacing: -0.02em;
++  line-height: 1.1;
+ }
+ 
+ .home-page p {
+   font-size: 1.2rem;
+-  color: #64748b;
++  color: rgba(255,255,255,0.82);
+   margin-bottom: 40px;
+   line-height: 1.6;
+ }
+ 
+ .get-started-btn {
+   display: inline-block;
+-  background: linear-gradient(90deg, #6366f1 60%, #60a5fa 100%);
+-  color: #fff;
++  background: linear-gradient(90deg, #F5B841 0%, #F0A62E 100%);
++  color: #2E1065;
+   text-decoration: none;
+   padding: 16px 32px;
+   border-radius: 12px;
+   font-weight: 700;
+   font-size: 1.1rem;
+   transition: transform 0.2s, box-shadow 0.2s;
+-  box-shadow: 0 4px 16px rgba(99,102,241,0.3);
++  box-shadow: 0 4px 20px rgba(245, 184, 65, 0.35);
+ }
+ 
+ .get-started-btn:hover {
+   transform: translateY(-2px);
+-  box-shadow: 0 8px 24px rgba(99,102,241,0.4);
++  box-shadow: 0 8px 28px rgba(245, 184, 65, 0.45);
++}
++
++.get-started-btn.outline {
++  background: transparent;
++  color: #fff;
++  border: 2px solid rgba(255,255,255,0.5);
++  box-shadow: none;
++}
++
++.get-started-btn.outline:hover {
++  border-color: #fff;
++  background: rgba(255,255,255,0.08);
++  box-shadow: none;
++}
++
++/* Feature strip below hero */
++.feature-strip {
++  max-width: 1000px;
++  margin: -56px auto 64px;
++  padding: 0 32px;
++  position: relative;
++  z-index: 2;
++}
++
++.feature-card {
++  background: #fff;
++  border-radius: 16px;
++  padding: 28px 24px;
++  box-shadow: 0 12px 32px rgba(46, 16, 101, 0.14);
++  height: 100%;
++}
++
++.feature-card .feature-icon {
++  width: 44px;
++  height: 44px;
++  border-radius: 10px;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  background: #EDE4FB;
++  color: #5323A4;
++  margin-bottom: 14px;
++}
++
++.feature-card h3 {
++  font-family: 'Space Grotesk', 'Inter', sans-serif;
++  font-size: 1.1rem;
++  margin: 0 0 8px;
++  color: #1B1330;
++}
++
++.feature-card p {
++  font-size: 0.95rem;
++  color: #5B5470;
++  margin: 0;
++  line-height: 1.5;
+ }
+ 
+ /* Auth Pages */
+@@ -156,11 +285,11 @@ body {
+ 
+ .auth-form input:focus {
+   outline: none;
+-  border-color: #6366f1;
++  border-color: #5323A4;
+ }
+ 
+ .auth-form button {
+-  background: linear-gradient(90deg, #6366f1 60%, #60a5fa 100%);
++  background: linear-gradient(90deg, #5323A4 60%, #7C4DD9 100%);
+   color: #fff;
+   border: none;
+   padding: 14px;
+@@ -192,7 +321,7 @@ body {
+ }
+ 
+ .auth-page a {
+-  color: #6366f1;
++  color: #5323A4;
+   text-decoration: none;
+   font-weight: 600;
+ }
+@@ -333,7 +462,7 @@ body {
+ }
+ 
+ .locked-msg a {
+-  color: #6366f1;
++  color: #5323A4;
+   text-decoration: none;
+   font-weight: 600;
+ }
+@@ -389,7 +518,7 @@ body {
+ }
+ 
+ .resume-form input:focus, .resume-form textarea:focus {
+-  border: 1.5px solid #6366f1;
++  border: 1.5px solid #5323A4;
+   outline: none;
+ }
+ 
+@@ -405,7 +534,7 @@ body {
+ 
+ .skills-input-group button {
+   padding: 8px 14px;
+-  background: #6366f1;
++  background: #5323A4;
+   color: #fff;
+   border: none;
+   border-radius: 6px;
+@@ -415,7 +544,7 @@ body {
+ }
+ 
+ .skills-input-group button:hover {
+-  background: #4f46e5;
++  background: #3D1A78;
+   transform: translateY(-2px) scale(1.04);
+ }
+ 
+@@ -427,7 +556,7 @@ body {
+ }
+ 
+ .skill-chip {
+-  background: #6366f1;
++  background: #5323A4;
+   color: #fff;
+   padding: 5px 12px;
+   border-radius: 16px;
+@@ -449,7 +578,7 @@ body {
+ 
+ .resume-form button {
+   padding: 12px 0;
+-  background: linear-gradient(90deg, #6366f1 60%, #60a5fa 100%);
++  background: linear-gradient(90deg, #5323A4 60%, #7C4DD9 100%);
+   color: #fff;
+   border: none;
+   border-radius: 8px;
+@@ -467,7 +596,7 @@ body {
+ }
+ 
+ .resume-form button:not(:disabled):hover {
+-  background: linear-gradient(90deg, #4f46e5 60%, #2563eb 100%);
++  background: linear-gradient(90deg, #3D1A78 60%, #2563eb 100%);
+   transform: translateY(-2px) scale(1.03);
+ }
+ 
+@@ -494,7 +623,7 @@ body {
+ .resume-header h2 {
+   font-size: 2rem;
+   font-weight: 800;
+-  color: #3730a3;
++  color: #2E1065;
+   margin: 0;
+ }
+ 
+@@ -509,7 +638,7 @@ body {
+ }
+ 
+ .resume-section h3 {
+-  color: #6366f1;
++  color: #5323A4;
+   font-size: 1.1rem;
+   font-weight: 700;
+   margin-bottom: 4px;
+@@ -531,8 +660,8 @@ body {
+ }
+ 
+ .template-btn {
+-  background: #e0e7ff;
+-  color: #3730a3;
++  background: #EDE4FB;
++  color: #2E1065;
+   border: none;
+   border-radius: 6px;
+   padding: 7px 16px;
+@@ -543,19 +672,19 @@ body {
+ }
+ 
+ .template-btn.selected, .template-btn:hover {
+-  background: #6366f1;
++  background: #5323A4;
+   color: #fff;
+   transform: translateY(-2px) scale(1.04);
+ }
+ 
+ /* Template Styles */
+ .modern-template {
+-  border-left: 6px solid #6366f1;
++  border-left: 6px solid #5323A4;
+   background: #f1f5f9;
+ }
+ 
+ .modern-template .resume-header h2 {
+-  color: #6366f1;
++  color: #5323A4;
+ }
+ 
+ .modern-skills-list {
+@@ -568,7 +697,7 @@ body {
+ }
+ 
+ .modern-skills-list li {
+-  background: #6366f1;
++  background: #5323A4;
+   color: #fff;
+   border-radius: 12px;
+   padding: 4px 14px;
+@@ -586,13 +715,13 @@ body {
+ }
+ 
+ .creative-template {
+-  background: linear-gradient(120deg, #fdf6e3 0%, #e0e7ff 100%);
+-  border: 2.5px dashed #6366f1;
++  background: linear-gradient(120deg, #fdf6e3 0%, #EDE4FB 100%);
++  border: 2.5px dashed #5323A4;
+   color: #3b4252;
+ }
+ 
+ .creative-header h2 {
+-  color: #f59e42;
++  color: #F5B841;
+   font-family: 'Comic Sans MS', 'Comic Sans', cursive, sans-serif;
+ }
+ 
+@@ -604,7 +733,7 @@ body {
+ }
+ 
+ .creative-skill {
+-  background: #f59e42;
++  background: #F5B841;
+   color: #fff;
+ }
+ 
+@@ -643,7 +772,7 @@ body {
+ 
+ .template-thumb-modern .thumb-sidebar {
+   width: 8px;
+-  background: #6366f1;
++  background: #5323A4;
+   flex-shrink: 0;
+ }
+ 
+@@ -658,15 +787,15 @@ body {
+ }
+ 
+ .template-thumb-creative {
+-  background: linear-gradient(135deg, #fdf6e3 0%, #e0e7ff 100%);
+-  border: 2px dashed #6366f1;
++  background: linear-gradient(135deg, #fdf6e3 0%, #EDE4FB 100%);
++  border: 2px dashed #5323A4;
+ }
+ 
+ .thumb-header {
+   text-align: center;
+   margin-bottom: 10px;
+   padding-bottom: 8px;
+-  border-bottom: 2px solid #6366f1;
++  border-bottom: 2px solid #5323A4;
+ }
+ 
+ .thumb-name {
+@@ -677,11 +806,11 @@ body {
+ }
+ 
+ .thumb-name.accent {
+-  color: #6366f1;
++  color: #5323A4;
+ }
+ 
+ .thumb-name.creative {
+-  color: #f59e42;
++  color: #F5B841;
+   font-family: 'Comic Sans MS', 'Comic Sans', cursive, sans-serif;
+ }
+ 
+@@ -701,16 +830,16 @@ body {
+ .thumb-label {
+   font-size: 0.58rem;
+   font-weight: 700;
+-  color: #6366f1;
++  color: #5323A4;
+   margin-bottom: 4px;
+ }
+ 
+ .thumb-label.accent {
+-  color: #6366f1;
++  color: #5323A4;
+ }
+ 
+ .thumb-label.creative {
+-  color: #f59e42;
++  color: #F5B841;
+ }
+ 
+ .thumb-line {
+@@ -745,20 +874,20 @@ body {
+ 
+ .thumb-chip {
+   font-size: 0.48rem;
+-  background: #e0e7ff;
+-  color: #3730a3;
++  background: #EDE4FB;
++  color: #2E1065;
+   border-radius: 10px;
+   padding: 2px 6px;
+ }
+ 
+ .thumb-chip.creative {
+-  background: #f59e42;
++  background: #F5B841;
+   color: #fff;
+ }
+ 
+ .thumb-pill {
+   font-size: 0.48rem;
+-  background: #6366f1;
++  background: #5323A4;
+   color: #fff;
+   border-radius: 10px;
+   padding: 2px 6px;
+diff --git a/client/src/index.css b/client/src/index.css
+index 70ff4c9c9..ade5574f9 100644
+--- a/client/src/index.css
++++ b/client/src/index.css
+@@ -1,5 +1,3 @@
+-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
+-
+ html, body, #root {
+   height: 100%;
+   margin: 0;
+@@ -7,44 +5,6 @@ html, body, #root {
+   box-sizing: border-box;
+ }
+ 
+-body {
+-  font-family: Arial, sans-serif;
+-  background: #f4f4f4;
+-}
+-.app-container {
+-  max-width: 1000px;
+-  margin: 40px auto;
+-  background: #fff;
+-  border-radius: 8px;
+-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+-  padding: 32px;
+-}
+-.main-content {
+-  display: flex;
+-  gap: 32px;
+-}
+-.resume-form, .resume-preview {
+-  flex: 1;
+-  background: #fafafa;
+-  padding: 24px;
+-  border-radius: 8px;
+-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+-}
+-.resume-form input, .resume-form textarea {
+-  width: 100%;
+-  margin-bottom: 12px;
+-  padding: 8px;
+-  border: 1px solid #ddd;
+-  border-radius: 4px;
+-}
+-.resume-form button {
+-  padding: 10px 20px;
+-  background: #007bff;
+-  color: #fff;
+-  border: none;
+-  border-radius: 4px;
+-  cursor: pointer;
++* {
++  box-sizing: border-box;
+ }
+-.resume-form button:disabled {
+-  background: #aaa;
+-} 
+\ No newline at end of file
+diff --git a/client/src/index.js b/client/src/index.js
+index e5fc799c4..b091c5656 100644
+--- a/client/src/index.js
++++ b/client/src/index.js
+@@ -12,21 +12,54 @@ const getTheme = (mode) => createTheme({
+   palette: {
+     mode,
+     primary: {
+-      main: '#1976d2',
++      main: '#5323A4',
++      dark: '#2E1065',
++      light: '#7C4DD9',
++      contrastText: '#fff',
+     },
+     secondary: {
+-      main: '#ff4081',
++      main: '#F5B841',
++      dark: '#D99A1F',
++      contrastText: '#1B1330',
+     },
+     background: {
+-      default: mode === 'light' ? '#f4f6fa' : '#121212',
+-      paper: mode === 'light' ? '#fff' : '#1e1e1e',
++      default: mode === 'light' ? '#F7F5FB' : '#150C29',
++      paper: mode === 'light' ? '#ffffff' : '#1F1338',
++    },
++    text: {
++      primary: mode === 'light' ? '#1B1330' : '#EDE9F7',
++      secondary: mode === 'light' ? '#5B5470' : '#B6AED0',
+     },
+   },
+   typography: {
+-    fontFamily: 'Montserrat, Roboto, Arial, sans-serif',
++    fontFamily: 'Inter, "Segoe UI", Arial, sans-serif',
++    h1: { fontFamily: '"Space Grotesk", Inter, sans-serif', fontWeight: 700 },
++    h2: { fontFamily: '"Space Grotesk", Inter, sans-serif', fontWeight: 700 },
++    h3: { fontFamily: '"Space Grotesk", Inter, sans-serif', fontWeight: 700 },
++    h4: { fontFamily: '"Space Grotesk", Inter, sans-serif', fontWeight: 700 },
++    h5: { fontFamily: '"Space Grotesk", Inter, sans-serif', fontWeight: 600 },
++    h6: { fontFamily: '"Space Grotesk", Inter, sans-serif', fontWeight: 600 },
++    button: { fontWeight: 600, textTransform: 'none' },
+   },
+   shape: {
+-    borderRadius: 12,
++    borderRadius: 10,
++  },
++  components: {
++    MuiCard: {
++      styleOverrides: {
++        root: {
++          boxShadow: '0 4px 20px rgba(46, 16, 101, 0.08)',
++        },
++      },
++    },
++    MuiButton: {
++      styleOverrides: {
++        containedPrimary: {
++          background: 'linear-gradient(135deg, #5323A4 0%, #7C4DD9 100%)',
++          boxShadow: '0 4px 14px rgba(83, 35, 164, 0.3)',
++        },
++      },
++    },
+   },
+ });
+ 
+diff --git a/client/src/pages/AdminDashboard.js b/client/src/pages/AdminDashboard.js
+index ece15ce90..3c7a48f76 100644
+--- a/client/src/pages/AdminDashboard.js
++++ b/client/src/pages/AdminDashboard.js
+@@ -10,6 +10,9 @@ import PeopleIcon from '@mui/icons-material/People';
+ import DescriptionIcon from '@mui/icons-material/Description';
+ import LoginIcon from '@mui/icons-material/Login';
+ import SmartToyIcon from '@mui/icons-material/SmartToy';
++import {
++  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
++} from 'recharts';
+ import { useAuth } from '../App';
+ import { TEMPLATES } from '../data/templates';
+ import {
+@@ -121,6 +124,25 @@ function AdminDashboard() {
+         </Grid>
+       </Grid>
+ 
++      <Typography variant="h5" fontWeight={700} gutterBottom>Activity by user</Typography>
++      <Paper sx={{ p: 2, mb: 5 }}>
++        {users.length ? (
++          <ResponsiveContainer width="100%" height={280}>
++            <BarChart data={users.map(u => ({ name: u.email.split('@')[0], Logins: u.stats?.logins || 0, Resumes: u.stats?.cvsCreated || 0 }))}>
++              <CartesianGrid strokeDasharray="3 3" stroke="#EDE4FB" />
++              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
++              <YAxis allowDecimals={false} />
++              <Tooltip />
++              <Legend />
++              <Bar dataKey="Logins" fill="#5323A4" radius={[4, 4, 0, 0]} />
++              <Bar dataKey="Resumes" fill="#F5B841" radius={[4, 4, 0, 0]} />
++            </BarChart>
++          </ResponsiveContainer>
++        ) : (
++          <Typography variant="body2" color="text.secondary">No user activity yet.</Typography>
++        )}
++      </Paper>
++
+       <Typography variant="h5" fontWeight={700} gutterBottom>Users</Typography>
+       <TableContainer component={Paper} sx={{ mb: 5 }}>
+         <Table size="small">
+diff --git a/client/src/pages/Home.js b/client/src/pages/Home.js
+index 1a17c4f31..4b68357fa 100644
+--- a/client/src/pages/Home.js
++++ b/client/src/pages/Home.js
+@@ -1,42 +1,80 @@
+ import React from 'react';
+ import { Link } from 'react-router-dom';
+-import { Container, Box, Typography, Alert } from '@mui/material';
++import { Container, Box, Typography, Alert, Grid } from '@mui/material';
++import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
++import PaletteIcon from '@mui/icons-material/Palette';
++import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+ import { useAuth } from '../App';
+ import { getAnnouncement } from '../utils/admin';
+ 
++const FEATURES = [
++  {
++    icon: <AutoAwesomeIcon />,
++    title: 'AI-assisted writing',
++    body: 'Get help wording your experience and skills so your resume reads clearly and confidently.',
++  },
++  {
++    icon: <PaletteIcon />,
++    title: 'Professional templates',
++    body: 'Pick from a small set of clean, recruiter-friendly layouts and switch anytime.',
++  },
++  {
++    icon: <PictureAsPdfIcon />,
++    title: 'Instant PDF export',
++    body: 'Download a polished, ready-to-send PDF the moment your resume is complete.',
++  },
++];
++
+ function Home() {
+   const { user } = useAuth();
+   const announcement = getAnnouncement();
+ 
+   return (
+-    <Container maxWidth="md" sx={{ mt: 8 }}>
+-      {announcement && (
+-        <Alert severity="info" sx={{ mb: 4 }}>{announcement}</Alert>
+-      )}
+-      {user?.role === 'admin' && (
+-        <Alert severity="success" sx={{ mb: 4 }}>
+-          Welcome, Admin — <Link to="/admin">go to your dashboard</Link>.
+-        </Alert>
+-      )}
+-      <Box sx={{ textAlign: 'center', mb: 6 }}>
+-        <Typography variant="h2" gutterBottom>Welcome to ResumeBuilder</Typography>
+-        <Typography variant="h5" color="textSecondary">Create a professional resume in minutes with beautiful templates and AI assistance.</Typography>
+-      </Box>
+-      <Box sx={{ textAlign: 'center', display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+-        <Link to="/templates" className="get-started-btn">
+-          <Typography variant="button" sx={{ fontSize: 20, px: 4, py: 2, bgcolor: 'primary.main', color: '#fff', borderRadius: 2, textDecoration: 'none', '&:hover': { bgcolor: 'primary.dark' } }}>
+-            Get Started
++    <>
++      <div className="hero">
++        <div className="hero-content">
++          <Typography component="h1" sx={{ fontFamily: '"Space Grotesk", Inter, sans-serif', fontSize: { xs: '2.2rem', sm: '3.2rem' }, fontWeight: 700, color: '#fff', mb: 2.5, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
++            Build a resume that gets you the interview
++          </Typography>
++          <Typography sx={{ fontSize: { xs: '1.05rem', sm: '1.2rem' }, color: 'rgba(255,255,255,0.82)', mb: 5, lineHeight: 1.6 }}>
++            Create a professional resume in minutes with AI-assisted writing and clean, recruiter-friendly templates.
+           </Typography>
+-        </Link>
+-        {user && (
+-          <Link to="/dashboard" className="get-started-btn">
+-            <Typography variant="button" sx={{ fontSize: 20, px: 4, py: 2, border: '2px solid', borderColor: 'primary.main', color: 'primary.main', borderRadius: 2, textDecoration: 'none' }}>
+-              View Your Dashboard
+-            </Typography>
+-          </Link>
+-        )}
+-      </Box>
+-    </Container>
++          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
++            <Link to="/templates" className="get-started-btn">Get Started</Link>
++            {user && (
++              <Link to="/dashboard" className="get-started-btn outline">View Your Dashboard</Link>
++            )}
++          </Box>
++        </div>
++      </div>
++
++      <div className="feature-strip">
++        <Grid container spacing={3}>
++          {FEATURES.map((f) => (
++            <Grid item xs={12} sm={4} key={f.title}>
++              <div className="feature-card">
++                <div className="feature-icon">{f.icon}</div>
++                <h3>{f.title}</h3>
++                <p>{f.body}</p>
++              </div>
++            </Grid>
++          ))}
++        </Grid>
++      </div>
++
++      {(announcement || user?.role === 'admin') && (
++        <Container maxWidth="md" sx={{ mb: 6 }}>
++          {announcement && (
++            <Alert severity="info" sx={{ mb: 2 }}>{announcement}</Alert>
++          )}
++          {user?.role === 'admin' && (
++            <Alert severity="success">
++              Welcome, Admin — <Link to="/admin">go to your dashboard</Link>.
++            </Alert>
++          )}
++        </Container>
++      )}
++    </>
+   );
+ }
+ 
+diff --git a/package-lock.json b/package-lock.json
+index 65f2c4c82..909940fd7 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -30,7 +30,8 @@
+         "react": "^18.2.0",
+         "react-dom": "^18.2.0",
+         "react-router-dom": "^6.23.0",
+-        "react-scripts": "5.0.1"
++        "react-scripts": "5.0.1",
++        "recharts": "^2.12.7"
+       }
+     },
+     "client/node_modules/react-router-dom": {
+@@ -4232,6 +4233,69 @@
+         "@types/node": "*"
+       }
+     },
++    "node_modules/@types/d3-array": {
++      "version": "3.2.2",
++      "resolved": "https://registry.npmjs.org/@types/d3-array/-/d3-array-3.2.2.tgz",
++      "integrity": "sha512-hOLWVbm7uRza0BYXpIIW5pxfrKe0W+D5lrFiAEYR+pb6w3N2SwSMaJbXdUfSEv+dT4MfHBLtn5js0LAWaO6otw==",
++      "license": "MIT"
++    },
++    "node_modules/@types/d3-color": {
++      "version": "3.1.3",
++      "resolved": "https://registry.npmjs.org/@types/d3-color/-/d3-color-3.1.3.tgz",
++      "integrity": "sha512-iO90scth9WAbmgv7ogoq57O9YpKmFBbmoEoCHDB2xMBY0+/KVrqAaCDyCE16dUspeOvIxFFRI+0sEtqDqy2b4A==",
++      "license": "MIT"
++    },
++    "node_modules/@types/d3-ease": {
++      "version": "3.0.2",
++      "resolved": "https://registry.npmjs.org/@types/d3-ease/-/d3-ease-3.0.2.tgz",
++      "integrity": "sha512-NcV1JjO5oDzoK26oMzbILE6HW7uVXOHLQvHshBUW4UMdZGfiY6v5BeQwh9a9tCzv+CeefZQHJt5SRgK154RtiA==",
++      "license": "MIT"
++    },
++    "node_modules/@types/d3-interpolate": {
++      "version": "3.0.4",
++      "resolved": "https://registry.npmjs.org/@types/d3-interpolate/-/d3-interpolate-3.0.4.tgz",
++      "integrity": "sha512-mgLPETlrpVV1YRJIglr4Ez47g7Yxjl1lj7YKsiMCb27VJH9W8NVM6Bb9d8kkpG/uAQS5AmbA48q2IAolKKo1MA==",
++      "license": "MIT",
++      "dependencies": {
++        "@types/d3-color": "*"
++      }
++    },
++    "node_modules/@types/d3-path": {
++      "version": "3.1.1",
++      "resolved": "https://registry.npmjs.org/@types/d3-path/-/d3-path-3.1.1.tgz",
++      "integrity": "sha512-VMZBYyQvbGmWyWVea0EHs/BwLgxc+MKi1zLDCONksozI4YJMcTt8ZEuIR4Sb1MMTE8MMW49v0IwI5+b7RmfWlg==",
++      "license": "MIT"
++    },
++    "node_modules/@types/d3-scale": {
++      "version": "4.0.9",
++      "resolved": "https://registry.npmjs.org/@types/d3-scale/-/d3-scale-4.0.9.tgz",
++      "integrity": "sha512-dLmtwB8zkAeO/juAMfnV+sItKjlsw2lKdZVVy6LRr0cBmegxSABiLEpGVmSJJ8O08i4+sGR6qQtb6WtuwJdvVw==",
++      "license": "MIT",
++      "dependencies": {
++        "@types/d3-time": "*"
++      }
++    },
++    "node_modules/@types/d3-shape": {
++      "version": "3.2.0",
++      "resolved": "https://registry.npmjs.org/@types/d3-shape/-/d3-shape-3.2.0.tgz",
++      "integrity": "sha512-kVd74ta9eof3eJOvbNd1vGKS/XERRyQbT26Og63hIsvDO84cjD5gEOhsXf26w3FSoNlPVz84DOFcKv/oou+fMw==",
++      "license": "MIT",
++      "dependencies": {
++        "@types/d3-path": "*"
++      }
++    },
++    "node_modules/@types/d3-time": {
++      "version": "3.0.4",
++      "resolved": "https://registry.npmjs.org/@types/d3-time/-/d3-time-3.0.4.tgz",
++      "integrity": "sha512-yuzZug1nkAAaBlBBikKZTgzCeA+k1uy4ZFwWANOfKw5z5LRhV0gNA7gNkKm7HoK+HRN0wX3EkxGk0fpbWhmB7g==",
++      "license": "MIT"
++    },
++    "node_modules/@types/d3-timer": {
++      "version": "3.0.2",
++      "resolved": "https://registry.npmjs.org/@types/d3-timer/-/d3-timer-3.0.2.tgz",
++      "integrity": "sha512-Ps3T8E8dZDam6fUyNiMkekK3XUsaUEik+idO9/YjPtfj2qruF8tFBXS7XhtE4iIXBLxhmLjP3SXpLhVf21I9Lw==",
++      "license": "MIT"
++    },
+     "node_modules/@types/eslint": {
+       "version": "8.56.12",
+       "resolved": "https://registry.npmjs.org/@types/eslint/-/eslint-8.56.12.tgz",
+@@ -7587,6 +7651,127 @@
+       "integrity": "sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==",
+       "license": "MIT"
+     },
++    "node_modules/d3-array": {
++      "version": "3.2.4",
++      "resolved": "https://registry.npmjs.org/d3-array/-/d3-array-3.2.4.tgz",
++      "integrity": "sha512-tdQAmyA18i4J7wprpYq8ClcxZy3SC31QMeByyCFyRt7BVHdREQZ5lpzoe5mFEYZUWe+oq8HBvk9JjpibyEV4Jg==",
++      "license": "ISC",
++      "dependencies": {
++        "internmap": "1 - 2"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-color": {
++      "version": "3.1.0",
++      "resolved": "https://registry.npmjs.org/d3-color/-/d3-color-3.1.0.tgz",
++      "integrity": "sha512-zg/chbXyeBtMQ1LbD/WSoW2DpC3I0mpmPdW+ynRTj/x2DAWYrIY7qeZIHidozwV24m4iavr15lNwIwLxRmOxhA==",
++      "license": "ISC",
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-ease": {
++      "version": "3.0.1",
++      "resolved": "https://registry.npmjs.org/d3-ease/-/d3-ease-3.0.1.tgz",
++      "integrity": "sha512-wR/XK3D3XcLIZwpbvQwQ5fK+8Ykds1ip7A2Txe0yxncXSdq1L9skcG7blcedkOX+ZcgxGAmLX1FrRGbADwzi0w==",
++      "license": "BSD-3-Clause",
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-format": {
++      "version": "3.1.2",
++      "resolved": "https://registry.npmjs.org/d3-format/-/d3-format-3.1.2.tgz",
++      "integrity": "sha512-AJDdYOdnyRDV5b6ArilzCPPwc1ejkHcoyFarqlPqT7zRYjhavcT3uSrqcMvsgh2CgoPbK3RCwyHaVyxYcP2Arg==",
++      "license": "ISC",
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-interpolate": {
++      "version": "3.0.1",
++      "resolved": "https://registry.npmjs.org/d3-interpolate/-/d3-interpolate-3.0.1.tgz",
++      "integrity": "sha512-3bYs1rOD33uo8aqJfKP3JWPAibgw8Zm2+L9vBKEHJ2Rg+viTR7o5Mmv5mZcieN+FRYaAOWX5SJATX6k1PWz72g==",
++      "license": "ISC",
++      "dependencies": {
++        "d3-color": "1 - 3"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-path": {
++      "version": "3.1.0",
++      "resolved": "https://registry.npmjs.org/d3-path/-/d3-path-3.1.0.tgz",
++      "integrity": "sha512-p3KP5HCf/bvjBSSKuXid6Zqijx7wIfNW+J/maPs+iwR35at5JCbLUT0LzF1cnjbCHWhqzQTIN2Jpe8pRebIEFQ==",
++      "license": "ISC",
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-scale": {
++      "version": "4.0.2",
++      "resolved": "https://registry.npmjs.org/d3-scale/-/d3-scale-4.0.2.tgz",
++      "integrity": "sha512-GZW464g1SH7ag3Y7hXjf8RoUuAFIqklOAq3MRl4OaWabTFJY9PN/E1YklhXLh+OQ3fM9yS2nOkCoS+WLZ6kvxQ==",
++      "license": "ISC",
++      "dependencies": {
++        "d3-array": "2.10.0 - 3",
++        "d3-format": "1 - 3",
++        "d3-interpolate": "1.2.0 - 3",
++        "d3-time": "2.1.1 - 3",
++        "d3-time-format": "2 - 4"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-shape": {
++      "version": "3.2.0",
++      "resolved": "https://registry.npmjs.org/d3-shape/-/d3-shape-3.2.0.tgz",
++      "integrity": "sha512-SaLBuwGm3MOViRq2ABk3eLoxwZELpH6zhl3FbAoJ7Vm1gofKx6El1Ib5z23NUEhF9AsGl7y+dzLe5Cw2AArGTA==",
++      "license": "ISC",
++      "dependencies": {
++        "d3-path": "^3.1.0"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-time": {
++      "version": "3.1.0",
++      "resolved": "https://registry.npmjs.org/d3-time/-/d3-time-3.1.0.tgz",
++      "integrity": "sha512-VqKjzBLejbSMT4IgbmVgDjpkYrNWUYJnbCGo874u7MMKIWsILRX+OpX/gTk8MqjpT1A/c6HY2dCA77ZN0lkQ2Q==",
++      "license": "ISC",
++      "dependencies": {
++        "d3-array": "2 - 3"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-time-format": {
++      "version": "4.1.0",
++      "resolved": "https://registry.npmjs.org/d3-time-format/-/d3-time-format-4.1.0.tgz",
++      "integrity": "sha512-dJxPBlzC7NugB2PDLwo9Q8JiTR3M3e4/XANkreKSUxF8vvXKqm1Yfq4Q5dl8budlunRVlUUaDUgFt7eA8D6NLg==",
++      "license": "ISC",
++      "dependencies": {
++        "d3-time": "1 - 3"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-timer": {
++      "version": "3.0.1",
++      "resolved": "https://registry.npmjs.org/d3-timer/-/d3-timer-3.0.1.tgz",
++      "integrity": "sha512-ndfJ/JxxMd3nw31uyKoY2naivF+r29V+Lc0svZxe1JvvIRmi8hUsrMvdOwgS1o6uBHmiz91geQ0ylPP0aj1VUA==",
++      "license": "ISC",
++      "engines": {
++        "node": ">=12"
++      }
++    },
+     "node_modules/damerau-levenshtein": {
+       "version": "1.0.8",
+       "resolved": "https://registry.npmjs.org/damerau-levenshtein/-/damerau-levenshtein-1.0.8.tgz",
+@@ -7708,6 +7893,12 @@
+       "integrity": "sha512-8vDa8Qxvr/+d94hSh5P3IJwI5t8/c0KsMp+g8bNw9cY2icONa5aPfvKeieW1WlG0WQYwwhJ7mjui2xtiePQSXw==",
+       "license": "MIT"
+     },
++    "node_modules/decimal.js-light": {
++      "version": "2.5.1",
++      "resolved": "https://registry.npmjs.org/decimal.js-light/-/decimal.js-light-2.5.1.tgz",
++      "integrity": "sha512-qIMFpTMZmny+MMIitAB6D7iVPEorVw6YQRWkvarTkT4tBeSLLiHzcwj6q0MmYSFCiVpiqPJTJEYIrpcPzVEIvg==",
++      "license": "MIT"
++    },
+     "node_modules/dedent": {
+       "version": "0.7.0",
+       "resolved": "https://registry.npmjs.org/dedent/-/dedent-0.7.0.tgz",
+@@ -9359,6 +9550,15 @@
+       "integrity": "sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==",
+       "license": "MIT"
+     },
++    "node_modules/fast-equals": {
++      "version": "5.4.2",
++      "resolved": "https://registry.npmjs.org/fast-equals/-/fast-equals-5.4.2.tgz",
++      "integrity": "sha512-Ywe6jodPTWOTL9/k0bV7gdfP8twKL5Y8I8CZ933fAY5gBekICZSUQTbyH6ut2NZCNyB05mSUwAuEqdEIaOOlDQ==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=6.0.0"
++      }
++    },
+     "node_modules/fast-fifo": {
+       "version": "1.3.2",
+       "resolved": "https://registry.npmjs.org/fast-fifo/-/fast-fifo-1.3.2.tgz",
+@@ -10884,6 +11084,15 @@
+         "node": ">= 0.4"
+       }
+     },
++    "node_modules/internmap": {
++      "version": "2.0.3",
++      "resolved": "https://registry.npmjs.org/internmap/-/internmap-2.0.3.tgz",
++      "integrity": "sha512-5Hh7Y1wQbvY5ooGgPbDaL5iYLAPzMTUrjMulskHLH6wnv/A+1q5rgEaiuqEjB+oxGXIVZs1FF+R/KPN3ZSQYYg==",
++      "license": "ISC",
++      "engines": {
++        "node": ">=12"
++      }
++    },
+     "node_modules/ip-address": {
+       "version": "10.0.1",
+       "resolved": "https://registry.npmjs.org/ip-address/-/ip-address-10.0.1.tgz",
+@@ -16333,6 +16542,21 @@
+         "node": ">=10"
+       }
+     },
++    "node_modules/react-smooth": {
++      "version": "4.0.4",
++      "resolved": "https://registry.npmjs.org/react-smooth/-/react-smooth-4.0.4.tgz",
++      "integrity": "sha512-gnGKTpYwqL0Iii09gHobNolvX4Kiq4PKx6eWBCYYix+8cdw+cGo3do906l1NBPKkSWx1DghC1dlWG9L2uGd61Q==",
++      "license": "MIT",
++      "dependencies": {
++        "fast-equals": "^5.0.1",
++        "prop-types": "^15.8.1",
++        "react-transition-group": "^4.4.5"
++      },
++      "peerDependencies": {
++        "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
++        "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
++      }
++    },
+     "node_modules/react-transition-group": {
+       "version": "4.4.5",
+       "resolved": "https://registry.npmjs.org/react-transition-group/-/react-transition-group-4.4.5.tgz",
+@@ -16384,6 +16608,45 @@
+         "node": ">=8.10.0"
+       }
+     },
++    "node_modules/recharts": {
++      "version": "2.12.7",
++      "resolved": "https://registry.npmjs.org/recharts/-/recharts-2.12.7.tgz",
++      "integrity": "sha512-hlLJMhPQfv4/3NBSAyq3gzGg4h2v69RJh6KU7b3pXYNNAELs9kEoXOjbkxdXpALqKBoVmVptGfLpxdaVYqjmXQ==",
++      "deprecated": "1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide",
++      "license": "MIT",
++      "dependencies": {
++        "clsx": "^2.0.0",
++        "eventemitter3": "^4.0.1",
++        "lodash": "^4.17.21",
++        "react-is": "^16.10.2",
++        "react-smooth": "^4.0.0",
++        "recharts-scale": "^0.4.4",
++        "tiny-invariant": "^1.3.1",
++        "victory-vendor": "^36.6.8"
++      },
++      "engines": {
++        "node": ">=14"
++      },
++      "peerDependencies": {
++        "react": "^16.0.0 || ^17.0.0 || ^18.0.0",
++        "react-dom": "^16.0.0 || ^17.0.0 || ^18.0.0"
++      }
++    },
++    "node_modules/recharts-scale": {
++      "version": "0.4.5",
++      "resolved": "https://registry.npmjs.org/recharts-scale/-/recharts-scale-0.4.5.tgz",
++      "integrity": "sha512-kivNFO+0OcUNu7jQquLXAxz1FIwZj8nrj+YkOKc5694NbjCvcT6aSZiIzNzd2Kul4o4rTto8QVR9lMNtxD4G1w==",
++      "license": "MIT",
++      "dependencies": {
++        "decimal.js-light": "^2.4.1"
++      }
++    },
++    "node_modules/recharts/node_modules/react-is": {
++      "version": "16.13.1",
++      "resolved": "https://registry.npmjs.org/react-is/-/react-is-16.13.1.tgz",
++      "integrity": "sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==",
++      "license": "MIT"
++    },
+     "node_modules/recursive-readdir": {
+       "version": "2.2.3",
+       "resolved": "https://registry.npmjs.org/recursive-readdir/-/recursive-readdir-2.2.3.tgz",
+@@ -18674,6 +18937,12 @@
+       "integrity": "sha512-eHY7nBftgThBqOyHGVN+l8gF0BucP09fMo0oO/Lb0w1OF80dJv+lDVpXG60WMQvkcxAkNybKsrEIE3ZtKGmPrA==",
+       "license": "MIT"
+     },
++    "node_modules/tiny-invariant": {
++      "version": "1.3.3",
++      "resolved": "https://registry.npmjs.org/tiny-invariant/-/tiny-invariant-1.3.3.tgz",
++      "integrity": "sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg==",
++      "license": "MIT"
++    },
+     "node_modules/tmpl": {
+       "version": "1.0.5",
+       "resolved": "https://registry.npmjs.org/tmpl/-/tmpl-1.0.5.tgz",
+@@ -19209,6 +19478,28 @@
+         "node": ">= 0.8"
+       }
+     },
++    "node_modules/victory-vendor": {
++      "version": "36.9.2",
++      "resolved": "https://registry.npmjs.org/victory-vendor/-/victory-vendor-36.9.2.tgz",
++      "integrity": "sha512-PnpQQMuxlwYdocC8fIJqVXvkeViHYzotI+NJrCuav0ZYFoq912ZHBk3mCeuj+5/VpodOjPe1z0Fk2ihgzlXqjQ==",
++      "license": "MIT AND ISC",
++      "dependencies": {
++        "@types/d3-array": "^3.0.3",
++        "@types/d3-ease": "^3.0.0",
++        "@types/d3-interpolate": "^3.0.1",
++        "@types/d3-scale": "^4.0.2",
++        "@types/d3-shape": "^3.1.0",
++        "@types/d3-time": "^3.0.0",
++        "@types/d3-timer": "^3.0.0",
++        "d3-array": "^3.1.6",
++        "d3-ease": "^3.0.1",
++        "d3-interpolate": "^3.0.1",
++        "d3-scale": "^4.0.2",
++        "d3-shape": "^3.1.0",
++        "d3-time": "^3.0.0",
++        "d3-timer": "^3.0.1"
++      }
++    },
+     "node_modules/w3c-hr-time": {
+       "version": "1.0.2",
+       "resolved": "https://registry.npmjs.org/w3c-hr-time/-/w3c-hr-time-1.0.2.tgz",
