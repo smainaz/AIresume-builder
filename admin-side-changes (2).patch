@@ -1,0 +1,509 @@
+diff --git a/client/src/App.js b/client/src/App.js
+index f4a27ea13..f3cf19749 100644
+--- a/client/src/App.js
++++ b/client/src/App.js
+@@ -11,6 +11,7 @@ import Home from './pages/Home';
+ import Login from './pages/Login';
+ import Signup from './pages/Signup';
+ import Dashboard from './pages/Dashboard';
++import AdminDashboard from './pages/AdminDashboard';
+ import './App.css';
+ import { AppBar, Toolbar, Typography, IconButton, Box } from '@mui/material';
+ import Brightness4Icon from '@mui/icons-material/Brightness4';
+@@ -48,6 +49,7 @@ function Header() {
+         <Link to="/templates">Templates</Link>
+         <Link to="/builder">Builder</Link>
+         {user && <Link to="/dashboard">Dashboard</Link>}
++        {user?.role === 'admin' && <Link to="/admin">Admin</Link>}
+         {user ? (
+           <>
+             <span className="user-email">{user.email}</span>
+@@ -104,6 +106,7 @@ function AppBody() {
+         <Route path="/templates" element={<TemplateGallery />} />
+         <Route path="/builder" element={<ResumeBuilderPage />} />
+         <Route path="/dashboard" element={<Dashboard />} />
++        <Route path="/admin" element={<AdminDashboard />} />
+       </Routes>
+       <ChatbotWidget />
+     </AuthProvider>
+diff --git a/client/src/components/TemplateGallery.js b/client/src/components/TemplateGallery.js
+index acbe027cc..67bca2a00 100644
+--- a/client/src/components/TemplateGallery.js
++++ b/client/src/components/TemplateGallery.js
+@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
+ import { Card, CardActionArea, CardContent, Typography, Grid, Button } from '@mui/material';
+ import { TEMPLATES } from '../data/templates';
+ import TemplatePreviewThumbnail from './TemplatePreviewThumbnail';
++import { getDisabledTemplates } from '../utils/admin';
+ 
+ function TemplateGallery() {
+   const navigate = useNavigate();
+   const [selected, setSelected] = useState('classic');
++  const disabled = getDisabledTemplates();
++  const visibleTemplates = TEMPLATES.filter(t => !disabled.includes(t.key));
+ 
+   useEffect(() => {
+     setSelected(localStorage.getItem('selectedTemplate') || 'classic');
+@@ -22,7 +25,7 @@ function TemplateGallery() {
+     <div className="template-gallery">
+       <h2>Choose Your Resume Template</h2>
+       <Grid container spacing={3} justifyContent="center" sx={{ mt: 2 }}>
+-        {TEMPLATES.map((template) => {
++        {visibleTemplates.map((template) => {
+           const isSelected = selected === template.key;
+           return (
+             <Grid item key={template.key} xs={12} sm={6} md={3}>
+diff --git a/client/src/components/TemplateSelector.js b/client/src/components/TemplateSelector.js
+index c0f0679f8..18f13602f 100644
+--- a/client/src/components/TemplateSelector.js
++++ b/client/src/components/TemplateSelector.js
+@@ -2,13 +2,16 @@ import React from 'react';
+ import { Box, Typography, Grid, Card, CardActionArea, CardContent } from '@mui/material';
+ import { TEMPLATES } from '../data/templates';
+ import TemplatePreviewThumbnail from './TemplatePreviewThumbnail';
++import { getDisabledTemplates } from '../utils/admin';
+ 
+ function TemplateSelector({ value, onChange }) {
++  const disabled = getDisabledTemplates();
++  const visibleTemplates = TEMPLATES.filter(t => !disabled.includes(t.key));
+   return (
+     <Box sx={{ mt: 4, px: { xs: 1, sm: 2 } }}>
+       <Typography variant="h5" gutterBottom align="center">Select a Resume Template</Typography>
+       <Grid container spacing={2} justifyContent="center">
+-        {TEMPLATES.map((template) => {
++        {visibleTemplates.map((template) => {
+           const selected = value === template.key;
+           return (
+             <Grid item key={template.key} xs={12} sm={6} md={3}>
+diff --git a/client/src/pages/AdminDashboard.js b/client/src/pages/AdminDashboard.js
+new file mode 100644
+index 000000000..ece15ce90
+--- /dev/null
++++ b/client/src/pages/AdminDashboard.js
+@@ -0,0 +1,206 @@
++import React, { useEffect, useState } from 'react';
++import { Link } from 'react-router-dom';
++import axios from 'axios';
++import {
++  Container, Grid, Card, CardContent, Typography, Box, Chip,
++  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
++  Button, TextField, FormControlLabel, Switch, Paper, Snackbar, Alert,
++} from '@mui/material';
++import PeopleIcon from '@mui/icons-material/People';
++import DescriptionIcon from '@mui/icons-material/Description';
++import LoginIcon from '@mui/icons-material/Login';
++import SmartToyIcon from '@mui/icons-material/SmartToy';
++import { useAuth } from '../App';
++import { TEMPLATES } from '../data/templates';
++import {
++  getAllUsersWithStats, deleteUser,
++  getDisabledTemplates, setTemplateEnabled,
++  getAnnouncement, setAnnouncement,
++} from '../utils/admin';
++
++const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
++
++function StatCard({ icon, label, value }) {
++  return (
++    <Card sx={{ height: '100%' }}>
++      <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
++        <Box sx={{ color: 'primary.main' }}>{icon}</Box>
++        <Box>
++          <Typography variant="h4" fontWeight={700}>{value}</Typography>
++          <Typography variant="body2" color="text.secondary">{label}</Typography>
++        </Box>
++      </CardContent>
++    </Card>
++  );
++}
++
++function AdminDashboard() {
++  const { user } = useAuth();
++  const [users, setUsers] = useState([]);
++  const [disabledTemplates, setDisabledTemplates] = useState([]);
++  const [announcement, setAnnouncementText] = useState('');
++  const [health, setHealth] = useState(null);
++  const [toast, setToast] = useState('');
++
++  const refreshUsers = () => setUsers(getAllUsersWithStats());
++
++  useEffect(() => {
++    refreshUsers();
++    setDisabledTemplates(getDisabledTemplates());
++    setAnnouncementText(getAnnouncement());
++    axios.get(`${API_URL}/api/health`).then(res => setHealth(res.data)).catch(() => setHealth(null));
++  }, []);
++
++  if (!user) {
++    return <div className="locked-msg">Please <Link to="/login">log in</Link> to view this page.</div>;
++  }
++  if (user.role !== 'admin') {
++    return <div className="locked-msg">You don't have access to the admin dashboard.</div>;
++  }
++
++  const totalResumes = users.reduce((sum, u) => sum + (u.stats?.cvsCreated || 0), 0);
++  const totalLogins = users.reduce((sum, u) => sum + (u.stats?.logins || 0), 0);
++
++  const handleDelete = (targetUser) => {
++    if (targetUser.email === user.email) {
++      setToast("You can't delete your own account from here.");
++      return;
++    }
++    if (!window.confirm(`Delete ${targetUser.email}? This removes their account and usage stats.`)) return;
++    deleteUser(targetUser.email);
++    refreshUsers();
++    setToast(`${targetUser.email} was deleted.`);
++  };
++
++  const handleTemplateToggle = (key, enabled) => {
++    setTemplateEnabled(key, enabled);
++    setDisabledTemplates(getDisabledTemplates());
++  };
++
++  const handleAnnouncementSave = () => {
++    setAnnouncement(announcement);
++    setToast('Announcement updated.');
++  };
++
++  return (
++    <Container maxWidth="lg" sx={{ mt: 6, mb: 6 }}>
++      <Alert severity="success" sx={{ mb: 4 }}>
++        Welcome, Admin ({user.email}) — you have full system access.
++      </Alert>
++      <Typography variant="h4" fontWeight={700} gutterBottom>Admin Dashboard</Typography>
++      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
++        System-wide overview and management tools.
++      </Typography>
++
++      <Grid container spacing={3} sx={{ mb: 5 }}>
++        <Grid item xs={12} sm={6} md={3}>
++          <StatCard icon={<PeopleIcon fontSize="large" />} label="Total users" value={users.length} />
++        </Grid>
++        <Grid item xs={12} sm={6} md={3}>
++          <StatCard icon={<DescriptionIcon fontSize="large" />} label="Resumes created" value={totalResumes} />
++        </Grid>
++        <Grid item xs={12} sm={6} md={3}>
++          <StatCard icon={<LoginIcon fontSize="large" />} label="Total logins" value={totalLogins} />
++        </Grid>
++        <Grid item xs={12} sm={6} md={3}>
++          <Card sx={{ height: '100%' }}>
++            <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
++              <Box sx={{ color: 'primary.main' }}><SmartToyIcon fontSize="large" /></Box>
++              <Box>
++                <Chip
++                  size="small"
++                  color={health?.aiConfigured ? 'success' : 'default'}
++                  label={health ? (health.aiConfigured ? 'AI enhancement live' : 'AI fallback mode') : 'Unknown'}
++                />
++                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
++                  {health ? (health.jobsConfigured ? 'Live job search' : 'Sample job listings') : 'Server unreachable'}
++                </Typography>
++              </Box>
++            </CardContent>
++          </Card>
++        </Grid>
++      </Grid>
++
++      <Typography variant="h5" fontWeight={700} gutterBottom>Users</Typography>
++      <TableContainer component={Paper} sx={{ mb: 5 }}>
++        <Table size="small">
++          <TableHead>
++            <TableRow>
++              <TableCell>Email</TableCell>
++              <TableCell>Name</TableCell>
++              <TableCell>Provider</TableCell>
++              <TableCell>Role</TableCell>
++              <TableCell align="right">Logins</TableCell>
++              <TableCell align="right">Resumes</TableCell>
++              <TableCell>Last login</TableCell>
++              <TableCell align="right">Actions</TableCell>
++            </TableRow>
++          </TableHead>
++          <TableBody>
++            {users.map((u) => (
++              <TableRow key={u.email}>
++                <TableCell>{u.email}</TableCell>
++                <TableCell>{u.name || '—'}</TableCell>
++                <TableCell>{u.provider || 'email'}</TableCell>
++                <TableCell>
++                  <Chip size="small" color={u.role === 'admin' ? 'primary' : 'default'} label={u.role} />
++                </TableCell>
++                <TableCell align="right">{u.stats?.logins ?? 0}</TableCell>
++                <TableCell align="right">{u.stats?.cvsCreated ?? 0}</TableCell>
++                <TableCell>{u.stats?.lastLogin ? new Date(u.stats.lastLogin).toLocaleString() : '—'}</TableCell>
++                <TableCell align="right">
++                  <Button size="small" color="error" onClick={() => handleDelete(u)}>Delete</Button>
++                </TableCell>
++              </TableRow>
++            ))}
++            {!users.length && (
++              <TableRow><TableCell colSpan={8} align="center">No users yet.</TableCell></TableRow>
++            )}
++          </TableBody>
++        </Table>
++      </TableContainer>
++
++      <Typography variant="h5" fontWeight={700} gutterBottom>Template visibility</Typography>
++      <Paper sx={{ p: 2, mb: 5 }}>
++        {TEMPLATES.map((t) => (
++          <FormControlLabel
++            key={t.key}
++            sx={{ display: 'block' }}
++            control={
++              <Switch
++                checked={!disabledTemplates.includes(t.key)}
++                onChange={(e) => handleTemplateToggle(t.key, e.target.checked)}
++              />
++            }
++            label={`${t.name} — ${t.description}`}
++          />
++        ))}
++      </Paper>
++
++      <Typography variant="h5" fontWeight={700} gutterBottom>Site announcement</Typography>
++      <Paper sx={{ p: 2 }}>
++        <TextField
++          fullWidth
++          multiline
++          minRows={2}
++          placeholder="Shown as a banner on the home page. Leave blank to hide it."
++          value={announcement}
++          onChange={(e) => setAnnouncementText(e.target.value)}
++          sx={{ mb: 2 }}
++        />
++        <Button variant="contained" onClick={handleAnnouncementSave}>Save announcement</Button>
++      </Paper>
++
++      <Snackbar
++        open={!!toast}
++        autoHideDuration={3000}
++        onClose={() => setToast('')}
++        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
++      >
++        <Alert severity="info" onClose={() => setToast('')}>{toast}</Alert>
++      </Snackbar>
++    </Container>
++  );
++}
++
++export default AdminDashboard;
+diff --git a/client/src/pages/Home.js b/client/src/pages/Home.js
+index 5c38634d8..1a17c4f31 100644
+--- a/client/src/pages/Home.js
++++ b/client/src/pages/Home.js
+@@ -1,13 +1,23 @@
+ import React from 'react';
+ import { Link } from 'react-router-dom';
+-import { Container, Box, Typography } from '@mui/material';
++import { Container, Box, Typography, Alert } from '@mui/material';
+ import { useAuth } from '../App';
++import { getAnnouncement } from '../utils/admin';
+ 
+ function Home() {
+   const { user } = useAuth();
++  const announcement = getAnnouncement();
+ 
+   return (
+     <Container maxWidth="md" sx={{ mt: 8 }}>
++      {announcement && (
++        <Alert severity="info" sx={{ mb: 4 }}>{announcement}</Alert>
++      )}
++      {user?.role === 'admin' && (
++        <Alert severity="success" sx={{ mb: 4 }}>
++          Welcome, Admin — <Link to="/admin">go to your dashboard</Link>.
++        </Alert>
++      )}
+       <Box sx={{ textAlign: 'center', mb: 6 }}>
+         <Typography variant="h2" gutterBottom>Welcome to ResumeBuilder</Typography>
+         <Typography variant="h5" color="textSecondary">Create a professional resume in minutes with beautiful templates and AI assistance.</Typography>
+diff --git a/client/src/pages/Login.js b/client/src/pages/Login.js
+index e5942d93f..ca26aa8a3 100644
+--- a/client/src/pages/Login.js
++++ b/client/src/pages/Login.js
+@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
+ import { GoogleLogin } from '@react-oauth/google';
+ import { jwtDecode } from 'jwt-decode';
+ import { useAuth } from '../App';
++import { roleForEmail } from '../utils/admin';
+ 
+ const GOOGLE_ENABLED = Boolean(process.env.REACT_APP_GOOGLE_CLIENT_ID);
+ 
+@@ -18,7 +19,7 @@ function Login() {
+     const users = JSON.parse(localStorage.getItem('users') || '[]');
+     const user = users.find(u => u.email === email && u.password === password);
+     if (user) {
+-      login({ email });
++      login({ email, name: user.name, role: roleForEmail(email) });
+       navigate('/builder');
+     } else {
+       setError('Invalid email or password');
+@@ -33,12 +34,14 @@ function Login() {
+       // Register the Google account locally if it hasn't signed in before,
+       // matching the app's existing localStorage-based user store.
+       const users = JSON.parse(localStorage.getItem('users') || '[]');
+-      if (!users.find(u => u.email === googleEmail)) {
+-        users.push({ email: googleEmail, name, provider: 'google' });
++      let existing = users.find(u => u.email === googleEmail);
++      if (!existing) {
++        existing = { email: googleEmail, name, provider: 'google', role: roleForEmail(googleEmail) };
++        users.push(existing);
+         localStorage.setItem('users', JSON.stringify(users));
+       }
+ 
+-      login({ email: googleEmail, name, picture, provider: 'google' });
++      login({ email: googleEmail, name, picture, provider: 'google', role: roleForEmail(googleEmail) });
+       navigate('/builder');
+     } catch (err) {
+       setError('Could not sign in with Google. Please try again.');
+diff --git a/client/src/pages/Signup.js b/client/src/pages/Signup.js
+index dc1ebd70c..a4d40b55a 100644
+--- a/client/src/pages/Signup.js
++++ b/client/src/pages/Signup.js
+@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
+ import { GoogleLogin } from '@react-oauth/google';
+ import { jwtDecode } from 'jwt-decode';
+ import { useAuth } from '../App';
++import { roleForEmail } from '../utils/admin';
+ 
+ const GOOGLE_ENABLED = Boolean(process.env.REACT_APP_GOOGLE_CLIENT_ID);
+ 
+@@ -20,9 +21,10 @@ function Signup() {
+       setError('Email already registered');
+       return;
+     }
+-    users.push({ email, password });
++    const role = roleForEmail(email);
++    users.push({ email, password, role });
+     localStorage.setItem('users', JSON.stringify(users));
+-    login({ email });
++    login({ email, role });
+     navigate('/builder');
+   };
+ 
+@@ -32,12 +34,14 @@ function Signup() {
+       const { email: googleEmail, name, picture } = decoded;
+ 
+       const users = JSON.parse(localStorage.getItem('users') || '[]');
+-      if (!users.find(u => u.email === googleEmail)) {
+-        users.push({ email: googleEmail, name, provider: 'google' });
++      let existing = users.find(u => u.email === googleEmail);
++      if (!existing) {
++        existing = { email: googleEmail, name, provider: 'google', role: roleForEmail(googleEmail) };
++        users.push(existing);
+         localStorage.setItem('users', JSON.stringify(users));
+       }
+ 
+-      login({ email: googleEmail, name, picture, provider: 'google' });
++      login({ email: googleEmail, name, picture, provider: 'google', role: roleForEmail(googleEmail) });
+       navigate('/builder');
+     } catch (err) {
+       setError('Could not sign up with Google. Please try again.');
+diff --git a/client/src/utils/admin.js b/client/src/utils/admin.js
+new file mode 100644
+index 000000000..6bcfaffa0
+--- /dev/null
++++ b/client/src/utils/admin.js
+@@ -0,0 +1,80 @@
++// Admin utilities — mirrors the app's existing localStorage-based data
++// model (no backend/database involved), matching users/stats/templates
++// patterns already used in App.js, Login.js, Signup.js, and stats.js.
++
++import { getStats } from './stats';
++
++// The one email allowed to have admin access. Change this to your own
++// email — it's the only account that will ever get the admin role.
++export const ADMIN_EMAIL = 'sandramaina078@gmail.com';
++
++export function isAdminEmail(email) {
++  return Boolean(email) && email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
++}
++
++const USERS_KEY = 'users';
++const DISABLED_TEMPLATES_KEY = 'admin_disabled_templates';
++const ANNOUNCEMENT_KEY = 'admin_announcement';
++
++function readUsers() {
++  return JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
++}
++
++function writeUsers(users) {
++  localStorage.setItem(USERS_KEY, JSON.stringify(users));
++}
++
++// ---------------------------------------------------------------------------
++// User management
++// ---------------------------------------------------------------------------
++
++export function getAllUsersWithStats() {
++  return readUsers().map(u => ({
++    ...u,
++    role: roleForEmail(u.email),
++    stats: getStats(u.email),
++  }));
++}
++
++export function deleteUser(email) {
++  const users = readUsers().filter(u => u.email !== email);
++  writeUsers(users);
++  localStorage.removeItem(`stats_${email}`);
++  return true;
++}
++
++// Role is always derived from the email, never from what's stored — so
++// even if localStorage is edited by hand, only ADMIN_EMAIL ever gets in.
++export function roleForEmail(email) {
++  return isAdminEmail(email) ? 'admin' : 'user';
++}
++
++// ---------------------------------------------------------------------------
++// Template visibility
++// ---------------------------------------------------------------------------
++
++export function getDisabledTemplates() {
++  return JSON.parse(localStorage.getItem(DISABLED_TEMPLATES_KEY) || '[]');
++}
++
++export function setTemplateEnabled(key, enabled) {
++  const disabled = new Set(getDisabledTemplates());
++  if (enabled) disabled.delete(key); else disabled.add(key);
++  localStorage.setItem(DISABLED_TEMPLATES_KEY, JSON.stringify([...disabled]));
++}
++
++// ---------------------------------------------------------------------------
++// Site announcement banner
++// ---------------------------------------------------------------------------
++
++export function getAnnouncement() {
++  return localStorage.getItem(ANNOUNCEMENT_KEY) || '';
++}
++
++export function setAnnouncement(text) {
++  if (text && text.trim()) {
++    localStorage.setItem(ANNOUNCEMENT_KEY, text.trim());
++  } else {
++    localStorage.removeItem(ANNOUNCEMENT_KEY);
++  }
++}
+diff --git a/server/index.js b/server/index.js
+index f10f6ee5e..62500f714 100644
+--- a/server/index.js
++++ b/server/index.js
+@@ -277,5 +277,17 @@ app.post('/api/chatbot', async (req, res) => {
+   }
+ });
+ 
++// ---------------------------------------------------------------------------
++// System health — used by the admin dashboard to show live/fallback status.
++// Only reports whether keys are set, never the keys themselves.
++// ---------------------------------------------------------------------------
++app.get('/api/health', (req, res) => {
++  res.json({
++    aiConfigured: Boolean(OPENROUTER_API_KEY),
++    jobsConfigured: Boolean(ADZUNA_APP_ID && ADZUNA_APP_KEY),
++    model: OPENROUTER_MODEL,
++  });
++});
++
+ const PORT = process.env.PORT || 5000;
+ app.listen(PORT, () => console.log(`Server running on port ${PORT} (AI model: ${OPENROUTER_MODEL})`));
+\ No newline at end of file

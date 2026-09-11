@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardActionArea, CardContent, Typography, Grid, Button } from '@mui/material';
 import { TEMPLATES } from '../data/templates';
 import TemplatePreviewThumbnail from './TemplatePreviewThumbnail';
+import { getDisabledTemplates } from '../utils/admin';
 
 function TemplateGallery() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState('classic');
+  const disabled = getDisabledTemplates();
+  const visibleTemplates = TEMPLATES.filter(t => !disabled.includes(t.key));
 
   useEffect(() => {
     setSelected(localStorage.getItem('selectedTemplate') || 'classic');
@@ -22,7 +25,7 @@ function TemplateGallery() {
     <div className="template-gallery">
       <h2>Choose Your Resume Template</h2>
       <Grid container spacing={3} justifyContent="center" sx={{ mt: 2 }}>
-        {TEMPLATES.map((template) => {
+        {visibleTemplates.map((template) => {
           const isSelected = selected === template.key;
           return (
             <Grid item key={template.key} xs={12} sm={6} md={3}>

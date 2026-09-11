@@ -11,6 +11,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import './App.css';
 import { AppBar, Toolbar, Typography, IconButton, Box } from '@mui/material';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
@@ -48,6 +49,7 @@ function Header() {
         <Link to="/templates">Templates</Link>
         <Link to="/builder">Builder</Link>
         {user && <Link to="/dashboard">Dashboard</Link>}
+        {user?.role === 'admin' && <Link to="/admin">Admin</Link>}
         {user ? (
           <>
             <span className="user-email">{user.email}</span>
@@ -104,6 +106,7 @@ function AppBody() {
         <Route path="/templates" element={<TemplateGallery />} />
         <Route path="/builder" element={<ResumeBuilderPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
       <ChatbotWidget />
     </AuthProvider>

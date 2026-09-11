@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import { useAuth } from '../App';
+import { roleForEmail } from '../utils/admin';
 
 const GOOGLE_ENABLED = Boolean(process.env.REACT_APP_GOOGLE_CLIENT_ID);
 
@@ -18,7 +19,7 @@ function Login() {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const user = users.find(u => u.email === email && u.password === password);
     if (user) {
-      login({ email });
+      login({ email, name: user.name, role: roleForEmail(email) });
       navigate('/builder');
     } else {
       setError('Invalid email or password');
@@ -33,12 +34,14 @@ function Login() {
       // Register the Google account locally if it hasn't signed in before,
       // matching the app's existing localStorage-based user store.
       const users = JSON.parse(localStorage.getItem('users') || '[]');
-      if (!users.find(u => u.email === googleEmail)) {
-        users.push({ email: googleEmail, name, provider: 'google' });
+      let existing = users.find(u => u.email === googleEmail);
+      if (!existing) {
+        existing = { email: googleEmail, name, provider: 'google', role: roleForEmail(googleEmail) };
+        users.push(existing);
         localStorage.setItem('users', JSON.stringify(users));
       }
 
-      login({ email: googleEmail, name, picture, provider: 'google' });
+      login({ email: googleEmail, name, picture, provider: 'google', role: roleForEmail(googleEmail) });
       navigate('/builder');
     } catch (err) {
       setError('Could not sign in with Google. Please try again.');

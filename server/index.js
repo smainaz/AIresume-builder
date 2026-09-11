@@ -277,5 +277,17 @@ app.post('/api/chatbot', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// System health — used by the admin dashboard to show live/fallback status.
+// Only reports whether keys are set, never the keys themselves.
+// ---------------------------------------------------------------------------
+app.get('/api/health', (req, res) => {
+  res.json({
+    aiConfigured: Boolean(OPENROUTER_API_KEY),
+    jobsConfigured: Boolean(ADZUNA_APP_ID && ADZUNA_APP_KEY),
+    model: OPENROUTER_MODEL,
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT} (AI model: ${OPENROUTER_MODEL})`));

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import { useAuth } from '../App';
+import { roleForEmail } from '../utils/admin';
 
 const GOOGLE_ENABLED = Boolean(process.env.REACT_APP_GOOGLE_CLIENT_ID);
 
@@ -20,9 +21,10 @@ function Signup() {
       setError('Email already registered');
       return;
     }
-    users.push({ email, password });
+    const role = roleForEmail(email);
+    users.push({ email, password, role });
     localStorage.setItem('users', JSON.stringify(users));
-    login({ email });
+    login({ email, role });
     navigate('/builder');
   };
 
@@ -32,12 +34,14 @@ function Signup() {
       const { email: googleEmail, name, picture } = decoded;
 
       const users = JSON.parse(localStorage.getItem('users') || '[]');
-      if (!users.find(u => u.email === googleEmail)) {
-        users.push({ email: googleEmail, name, provider: 'google' });
+      let existing = users.find(u => u.email === googleEmail);
+      if (!existing) {
+        existing = { email: googleEmail, name, provider: 'google', role: roleForEmail(googleEmail) };
+        users.push(existing);
         localStorage.setItem('users', JSON.stringify(users));
       }
 
-      login({ email: googleEmail, name, picture, provider: 'google' });
+      login({ email: googleEmail, name, picture, provider: 'google', role: roleForEmail(googleEmail) });
       navigate('/builder');
     } catch (err) {
       setError('Could not sign up with Google. Please try again.');

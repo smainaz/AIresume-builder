@@ -2,13 +2,16 @@ import React from 'react';
 import { Box, Typography, Grid, Card, CardActionArea, CardContent } from '@mui/material';
 import { TEMPLATES } from '../data/templates';
 import TemplatePreviewThumbnail from './TemplatePreviewThumbnail';
+import { getDisabledTemplates } from '../utils/admin';
 
 function TemplateSelector({ value, onChange }) {
+  const disabled = getDisabledTemplates();
+  const visibleTemplates = TEMPLATES.filter(t => !disabled.includes(t.key));
   return (
     <Box sx={{ mt: 4, px: { xs: 1, sm: 2 } }}>
       <Typography variant="h5" gutterBottom align="center">Select a Resume Template</Typography>
       <Grid container spacing={2} justifyContent="center">
-        {TEMPLATES.map((template) => {
+        {visibleTemplates.map((template) => {
           const selected = value === template.key;
           return (
             <Grid item key={template.key} xs={12} sm={6} md={3}>
